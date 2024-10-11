@@ -1,4 +1,4 @@
-package fr.thoridan.sl.block;
+package fr.thoridan.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;

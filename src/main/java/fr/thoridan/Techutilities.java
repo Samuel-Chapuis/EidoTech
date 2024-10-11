@@ -1,10 +1,10 @@
-package fr.thoridan.sl;
+package fr.thoridan;
 
 import com.mojang.logging.LogUtils;
-import fr.thoridan.sl.block.ModBlockEntities;
-import fr.thoridan.sl.block.ModBlocks;
-import fr.thoridan.sl.item.ModCreativeModTabs;
-import fr.thoridan.sl.item.ModItems;
+import fr.thoridan.block.ModBlockEntities;
+import fr.thoridan.block.ModBlocks;
+import fr.thoridan.item.ModCreativeModTabs;
+import fr.thoridan.item.ModItems;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.api.distmarker.Dist;

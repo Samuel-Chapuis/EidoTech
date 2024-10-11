@@ -1,12 +1,12 @@
-package fr.thoridan.sl.block;
+package fr.thoridan.block;
 
-import fr.thoridan.sl.Techutilities;
-import fr.thoridan.sl.item.ModItems;
-import net.minecraft.client.resources.model.Material;
+import fr.thoridan.Techutilities;
+import fr.thoridan.item.ModItems;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -22,8 +22,10 @@ public class ModBlocks {
     public static final RegistryObject<Block> UNIVERSAL_SEAL_BLOCK = registerBlock("universal_seal_block",
             () -> new UniversalSealBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)));
 
-//    public static final RegistryObject<Block> UNIVERSAL_SEAL_BLOCK = registerBlock("universal_seal_block",
-//            () -> new Block(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)));
+    public static final RegistryObject<Block> PRINTER = registerBlock("printer",
+            () -> new Printer(BlockBehaviour.Properties.copy(Blocks.DIRT).sound(SoundType.METAL)));
+
+
 
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {
         RegistryObject<T> toReturn = BLOCKS.register(name, block);

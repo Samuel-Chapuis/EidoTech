@@ -1,4 +1,4 @@
-package fr.thoridan.sl.mixin;
+package fr.thoridan.mixin;
 
 public class CraftingRecipeMixin {
 }

@@ -1,5 +1,8 @@
 {
     "block.techutilities.universal_seal_block": "Universal Seal Block",
+    "block.techutilities.universal_seal_block.description": "A block that can be used to let item, energy, fluid or gas pass through a solid block",
+
+    "block.techutilities.printer": "Printer",
 
     "creative_tab.techutilities": "Tech Utilities"
 }
