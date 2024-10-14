@@ -23,7 +23,7 @@ public class ModBlocks {
             () -> new UniversalSealBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)));
 
     public static final RegistryObject<Block> PRINTER = registerBlock("printer",
-            () -> new Printer(BlockBehaviour.Properties.copy(Blocks.DIRT).sound(SoundType.METAL)));
+            () -> new PrinterBlock(BlockBehaviour.Properties.copy(Blocks.DIRT).sound(SoundType.METAL)));
 
 
 
