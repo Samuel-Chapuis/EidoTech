@@ -5,6 +5,8 @@ import fr.thoridan.block.ModBlockEntities;
 import fr.thoridan.block.ModBlocks;
 import fr.thoridan.item.ModCreativeModTabs;
 import fr.thoridan.item.ModItems;
+import fr.thoridan.menu.ModMenus;
+import fr.thoridan.network.ModNetworking;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.api.distmarker.Dist;
@@ -33,6 +35,9 @@ public class Techutilities {
         ModBlocks.register(modEventBus);				// Register the blocks
         ModBlockEntities.register(modEventBus);
         ModCreativeModTabs.register(modEventBus);		// Ne marche pas tant que le bloc n'est pas rendu
+
+        ModMenus.register(modEventBus);
+        ModNetworking.registerPackets();
 
         modEventBus.addListener(this::commonSetup);
 

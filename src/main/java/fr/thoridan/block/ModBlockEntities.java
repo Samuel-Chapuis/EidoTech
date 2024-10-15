@@ -15,6 +15,10 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("universal_seal_block_entity",
                     () -> BlockEntityType.Builder.of(UniversalSealBlockEntity::new, ModBlocks.UNIVERSAL_SEAL_BLOCK.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<PrinterBlockEntity>> PRINTER_BLOCK_ENTITY = BLOCK_ENTITIES.register("printer_block_entity",
+            () -> BlockEntityType.Builder.of(PrinterBlockEntity::new, ModBlocks.PRINTER.get()).build(null));
+
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

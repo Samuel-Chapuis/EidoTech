@@ -1,18 +1,38 @@
 package fr.thoridan.block;
 
+import fr.thoridan.menu.PrinterMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.network.NetworkHooks;
+import net.minecraft.network.chat.Component;
 
-public class PrinterBlock extends Block {
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.EntityBlock;
+
+
+
+import javax.annotation.Nullable;
+import java.awt.*;
+
+public class PrinterBlock extends Block implements EntityBlock {
     public static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public PrinterBlock(Properties properties) {
@@ -26,6 +46,47 @@ public class PrinterBlock extends Block {
     }
 
     @Override
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+//        System.out.println("newBlockEntity called at " + pos);
+        return new PrinterBlockEntity(pos, state);
+    }
+
+    @Override
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+//        System.out.println("PrinterBlock use method called on " + (level.isClientSide ? "client" : "server") + " side");
+        if (!level.isClientSide) {
+            MenuProvider menuProvider = this.getMenuProvider(state, level, pos);
+            if (menuProvider != null) {
+                NetworkHooks.openScreen((ServerPlayer) player, menuProvider, pos);
+            } else {
+                player.displayClientMessage(Component.literal("Menu provider is null!"), true);
+            }
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+
+    @Nullable
+    @Override
+    public MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity instanceof PrinterBlockEntity) {
+            Component title = Component.literal("Custom Printer Title"); // Your new title
+            return new SimpleMenuProvider((windowId, playerInventory, player) ->
+                    new PrinterMenu(windowId, playerInventory, blockEntity), title);
+        }
+        return null;
+    }
+
+
+
+    @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
@@ -35,18 +96,26 @@ public class PrinterBlock extends Block {
         builder.add(FACING);
     }
 
-//    @Override
-//    public boolean isSolidRender(BlockState state, BlockGetter level, BlockPos pos) {
-//        return false;
-//    }
     @Override
     public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
         return false;
     }
 
-
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter plevel, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
+
+    //TODO : Change to a button
+    @Override
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean moved) {
+        super.neighborChanged(state, level, pos, neighborBlock, neighborPos, moved);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof PrinterBlockEntity printerBlockEntity) {
+            if (level.hasNeighborSignal(pos)) {
+                printerBlockEntity.placeStructure();
+            }
+        }
+    }
+
 }
