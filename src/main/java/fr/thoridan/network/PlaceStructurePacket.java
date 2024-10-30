@@ -11,23 +11,27 @@ public class PlaceStructurePacket {
     private final BlockPos blockEntityPos;
     private final BlockPos targetPos;
     private final Rotation rotation;
+    private final String schematicName; // Add this field
 
-    public PlaceStructurePacket(BlockPos blockEntityPos, int x, int y, int z, Rotation rotation) {
+    public PlaceStructurePacket(BlockPos blockEntityPos, int x, int y, int z, Rotation rotation, String schematicName) {
         this.blockEntityPos = blockEntityPos;
         this.targetPos = new BlockPos(x, y, z);
         this.rotation = rotation;
+        this.schematicName = schematicName;
     }
 
     public PlaceStructurePacket(FriendlyByteBuf buf) {
         this.blockEntityPos = buf.readBlockPos();
         this.targetPos = buf.readBlockPos();
         this.rotation = buf.readEnum(Rotation.class);
+        this.schematicName = buf.readUtf(32767); // Read the schematic name
     }
 
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeBlockPos(blockEntityPos);
         buf.writeBlockPos(targetPos);
         buf.writeEnum(rotation);
+        buf.writeUtf(schematicName); // Write the schematic name
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
@@ -37,7 +41,7 @@ public class PlaceStructurePacket {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
                 if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    printerBlockEntity.placeStructureAt(targetPos, rotation);
+                    printerBlockEntity.placeStructureAt(targetPos, rotation, schematicName); // Pass schematicName
                 }
             }
         });

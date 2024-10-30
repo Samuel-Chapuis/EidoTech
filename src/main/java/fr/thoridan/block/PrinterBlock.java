@@ -106,16 +106,4 @@ public class PrinterBlock extends Block implements EntityBlock {
         return SHAPE;
     }
 
-    //TODO : Change to a button
-    @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean moved) {
-        super.neighborChanged(state, level, pos, neighborBlock, neighborPos, moved);
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof PrinterBlockEntity printerBlockEntity) {
-            if (level.hasNeighborSignal(pos)) {
-                printerBlockEntity.placeStructure();
-            }
-        }
-    }
-
 }

@@ -24,6 +24,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private List<String> schematics;
     private int selectedIndex = -1;
     private EditBox posXField;
+    private String selectedSchematicName = null;
     private EditBox posYField;
     private EditBox posZField;
     private EditBox rotationField;
@@ -79,7 +80,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
             this.addRenderableWidget(new TextButton(x, startY + i * (buttonHeight + 2), textWidth, buttonHeight, text, button -> {
                 selectedIndex = index;
-                // Send packet to the server if needed
+                selectedSchematicName = schematics.get(index); // Store the selected schematic name
             }));
 
             // Add input fields and place button
@@ -134,8 +135,18 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
                 default -> Rotation.NONE;
             };
 
+            if (selectedSchematicName == null) {
+                System.out.println("No schematic selected");
+                return;
+            }
+
             // Send packet to server
-            ModNetworking.INSTANCE.sendToServer(new PlaceStructurePacket(menu.getBlockEntity().getBlockPos(), x, y, z, rotation));
+            ModNetworking.INSTANCE.sendToServer(new PlaceStructurePacket(
+                    menu.getBlockEntity().getBlockPos(),
+                    x, y, z,
+                    rotation,
+                    selectedSchematicName // Include the schematic name
+            ));
         } catch (NumberFormatException e) {
             System.out.println("Invalid position or rotation");
         }

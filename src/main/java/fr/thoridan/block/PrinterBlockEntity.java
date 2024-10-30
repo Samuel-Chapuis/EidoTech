@@ -1,141 +1,83 @@
 package fr.thoridan.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraft.world.level.levelgen.structure.templatesystem.BlockIgnoreProcessor;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 public class PrinterBlockEntity extends BlockEntity {
-    private String selectedSchematic = "";
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
-//        System.out.println("PrinterBlockEntity created at " + pos + " on " + (this.level != null && this.level.isClientSide ? "client" : "server") + " side");
     }
 
-
-    public String getSelectedSchematic() {
-        return selectedSchematic;
-    }
-
-    public void setSelectedSchematic(String schematic) {
-        this.selectedSchematic = schematic;
-        setChanged(); // Mark the block entity as changed to save the data
-        // Notify clients of the change
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-    }
-
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        selectedSchematic = tag.getString("SelectedSchematic");
-    }
-
-    @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.putString("SelectedSchematic", selectedSchematic);
-    }
-
-    @Override
-    public CompoundTag getUpdateTag() {
-        CompoundTag tag = new CompoundTag();
-        saveAdditional(tag);
-        return tag;
-    }
-
-    @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        load(tag);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
-    public void placeStructure() {
-        if (level != null && !level.isClientSide && !selectedSchematic.isEmpty()) {
-            ServerLevel serverLevel = (ServerLevel) level;
-            StructureTemplateManager structureManager = serverLevel.getStructureManager();
-
-            File schematicsFolder = serverLevel.getServer().getServerDirectory().toPath().resolve("schematics").toFile();
-            File schematicFile = new File(schematicsFolder, selectedSchematic);
-
-            try {
-                StructureTemplate structure = loadStructureFromFile(schematicFile, serverLevel);
-                if (structure != null) {
-                    BlockPos pos = worldPosition.above(); // Adjust as needed
-                    StructurePlaceSettings settings = new StructurePlaceSettings()
-                            .setRotation(Rotation.NONE)
-                            .setMirror(Mirror.NONE)
-                            .setRandom(serverLevel.random)
-                            .addProcessor(BlockIgnoreProcessor.STRUCTURE_BLOCK);
-
-                    // Place the structure
-                    structure.placeInWorld(serverLevel, pos, pos, settings, serverLevel.random, 2);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private StructureTemplate loadStructureFromFile(File file, ServerLevel serverLevel) throws IOException {
-        CompoundTag nbt;
-        try (FileInputStream fis = new FileInputStream(file)) {
-            nbt = NbtIo.readCompressed(fis);
+    public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName) {
+        Level level = this.getLevel();
+        if (level == null || level.isClientSide()) {
+            return;
         }
 
-        return serverLevel.getStructureManager().readStructure(nbt);
-    }
+        if (!(level instanceof ServerLevel serverLevel)) {
+            System.out.println("Level is not a ServerLevel");
+            return;
+        }
 
-    public void placeStructureAt(BlockPos targetPos, Rotation rotation) {
-        if (level != null && !level.isClientSide && !selectedSchematic.isEmpty()) {
-            ServerLevel serverLevel = (ServerLevel) level;
-            StructureTemplateManager structureManager = serverLevel.getStructureManager();
+        // Get the schematics folder in the game directory
+        File schematicsFolder = new File(FMLPaths.GAMEDIR.get().toFile(), "schematics");
+        File schematicFile = new File(schematicsFolder, schematicName);
 
-            File schematicsFolder = serverLevel.getServer().getServerDirectory().toPath().resolve("schematics").toFile();
-            File schematicFile = new File(schematicsFolder, selectedSchematic);
+        if (!schematicFile.exists()) {
+            System.out.println("Schematic file does not exist: " + schematicFile.getAbsolutePath());
+            return;
+        }
 
-            try {
-                StructureTemplate structure = loadStructureFromFile(schematicFile, serverLevel);
-                if (structure != null) {
-                    StructurePlaceSettings settings = new StructurePlaceSettings()
-                            .setRotation(rotation)
-                            .setMirror(Mirror.NONE)
-                            .setRandom(serverLevel.random)
-                            .addProcessor(BlockIgnoreProcessor.STRUCTURE_BLOCK);
+        CompoundTag nbtData;
+        try {
+            // Read the NBT data from the file
+            nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
+        } catch (IOException e) {
+            System.out.println("Failed to read schematic file: " + e.getMessage());
+            return;
+        }
 
-                    // Place the structure at the target position
-                    structure.placeInWorld(serverLevel, targetPos, targetPos, settings, serverLevel.random, 2);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        // Create a new StructureTemplate and load the NBT data
+        StructureTemplate template = new StructureTemplate();
+
+        // Obtain the HolderGetter<Block> from the ServerLevel's RegistryAccess
+        HolderGetter<Block> holderGetter = serverLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
+
+        // Load the structure with the HolderGetter
+        template.load(holderGetter, nbtData);
+
+        // Create StructurePlaceSettings
+        StructurePlaceSettings settings = new StructurePlaceSettings()
+                .setRotation(rotation)
+                .setMirror(Mirror.NONE)
+                .setIgnoreEntities(false)
+                .setFinalizeEntities(true);
+
+        // Place the structure in the world
+        boolean success = template.placeInWorld(serverLevel, targetPos, targetPos, settings, serverLevel.random, 2);
+
+        if (!success) {
+            System.out.println("Failed to place structure in world");
         }
     }
-
 }
-
