@@ -41,7 +41,10 @@ public class PlaceStructurePacket {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
                 if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    printerBlockEntity.placeStructureAt(targetPos, rotation, schematicName); // Pass schematicName
+                    // Update the block entity's stored parameters
+                    printerBlockEntity.setStructureParameters(targetPos, rotation, schematicName);
+                    // Place the structure
+                    printerBlockEntity.placeStructureAt(targetPos, rotation, schematicName);
                 }
             }
         });
