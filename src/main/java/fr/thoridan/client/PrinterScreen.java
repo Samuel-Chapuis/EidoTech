@@ -3,10 +3,7 @@ import fr.thoridan.Techutilities;
 import fr.thoridan.block.PrinterBlockEntity;
 import fr.thoridan.client.widget.TextButton;
 import fr.thoridan.menu.PrinterMenu;
-import fr.thoridan.network.ModNetworking;
-import fr.thoridan.network.PlaceStructurePacket;
-import fr.thoridan.network.RotationChangePacket;
-import fr.thoridan.network.SchematicSelectionPacket;
+import fr.thoridan.network.*;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
@@ -96,8 +93,6 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
         // Load stored values from the block entity
         PrinterBlockEntity blockEntity = menu.getBlockEntity();
-
-        // Load position fields from stored values
         if (blockEntity.getStoredTargetPos() != null) {
             posXField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getX()));
             posYField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getY()));
@@ -275,4 +270,26 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             default -> 0;
         };
     }
+
+    @Override
+    public void removed() {
+        super.removed();
+
+        try {
+            int x = Integer.parseInt(posXField.getValue());
+            int y = Integer.parseInt(posYField.getValue());
+            int z = Integer.parseInt(posZField.getValue());
+            BlockPos targetPos = new BlockPos(x, y, z);
+
+            // Send packet to server to update the block entity
+            ModNetworking.INSTANCE.sendToServer(new PositionUpdatePacket(
+                    menu.getBlockEntity().getBlockPos(),
+                    targetPos
+            ));
+
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid position");
+        }
+    }
+
 }

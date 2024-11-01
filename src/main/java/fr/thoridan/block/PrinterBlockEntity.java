@@ -222,5 +222,18 @@ public class PrinterBlockEntity extends BlockEntity {
         System.out.println("Schematic Name: " + storedSchematicName);
     }
 
+    public void setTargetPos(BlockPos targetPos) {
+        this.storedTargetPos = targetPos;
+        setChanged(); // Mark the block entity as changed to save data
+        if (level != null && !level.isClientSide()) {
+            // Notify the client about the change
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+
+        // Console output for debugging
+        System.out.println("Set Target Position in PrinterBlockEntity at " + getBlockPos());
+        System.out.println("Target Position: " + storedTargetPos);
+    }
+
 
 }

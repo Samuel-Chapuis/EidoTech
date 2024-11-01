@@ -39,6 +39,7 @@ public class Techutilities {
         ModMenus.register(modEventBus);
         ModNetworking.registerPackets();
 
+
         modEventBus.addListener(this::commonSetup);
 
         // Register ourselves for server and other game events we are interested in
