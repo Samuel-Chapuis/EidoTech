@@ -5,6 +5,7 @@ import fr.thoridan.client.widget.TextButton;
 import fr.thoridan.menu.PrinterMenu;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.PlaceStructurePacket;
+import fr.thoridan.network.RotationChangePacket;
 import fr.thoridan.network.SchematicSelectionPacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -20,19 +21,21 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.core.Rotations;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.world.level.block.Rotation;
+
 
 
 public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(Techutilities.MODID, "textures/gui/printer_gui.png");
     private List<String> schematics;
     private List<TextButton> schematicButtons = new ArrayList<>();
-
+    private CycleButton<Integer> rotationButton;
     private int selectedIndex = -1;
     private EditBox posXField;
     private String selectedSchematicName = null;
     private EditBox posYField;
     private EditBox posZField;
-    private EditBox rotationField;
 
 
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
@@ -71,11 +74,96 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
 
+        int inputFieldWidth = 50;
+        int inputFieldHeight = 20;
+        int inputsStartY = topPos + imageHeight - 80;
+
+        // Initialize input fields first
+        // X Position
+        posXField = new EditBox(this.font, leftPos + 10, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("X"));
+        posXField.setValue(String.valueOf(this.minecraft.player.getBlockX()));
+        this.addRenderableWidget(posXField);
+
+        // Y Position
+        posYField = new EditBox(this.font, leftPos + 70, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Y"));
+        posYField.setValue(String.valueOf(this.minecraft.player.getBlockY()));
+        this.addRenderableWidget(posYField);
+
+        // Z Position
+        posZField = new EditBox(this.font, leftPos + 130, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
+        posZField.setValue(String.valueOf(this.minecraft.player.getBlockZ()));
+        this.addRenderableWidget(posZField);
+
+        // Load stored values from the block entity
+        PrinterBlockEntity blockEntity = menu.getBlockEntity();
+
+        // Load position fields from stored values
+        if (blockEntity.getStoredTargetPos() != null) {
+            posXField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getX()));
+            posYField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getY()));
+            posZField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getZ()));
+        }
+
+        // Load the stored schematic name
+        if (blockEntity.getStoredSchematicName() != null) {
+            selectedSchematicName = blockEntity.getStoredSchematicName();
+            selectedIndex = schematics.indexOf(selectedSchematicName);
+        } else {
+            selectedSchematicName = null;
+            selectedIndex = -1;
+        }
+
+        // Initialize rotation values
+        int initialRotationDegrees = 0;
+        if (blockEntity.getStoredRotation() != null) {
+            initialRotationDegrees = getDegreesFromRotation(blockEntity.getStoredRotation());
+        }
+
+        // Now create the schematic buttons
+        createSchematicButtons();
+
+        // Update the button colors to reflect the stored selection
+        updateSchematicButtonColors();
+
+        // Rotation CycleButton
+        rotationButton = CycleButton.<Integer>builder(degrees -> Component.literal(degrees + "°"))
+                .withValues(0, 90, 180, 270)
+                .displayOnlyValue()
+                .withInitialValue(initialRotationDegrees)
+                .create(leftPos + 190, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Rotation"), (button, value) -> {
+                    // Handle rotation change
+                    Rotation rotation = switch (value) {
+                        case 90 -> Rotation.CLOCKWISE_90;
+                        case 180 -> Rotation.CLOCKWISE_180;
+                        case 270 -> Rotation.COUNTERCLOCKWISE_90;
+                        default -> Rotation.NONE;
+                    };
+
+                    // Send packet to server to update the block entity
+                    ModNetworking.INSTANCE.sendToServer(new RotationChangePacket(
+                            menu.getBlockEntity().getBlockPos(),
+                            rotation
+                    ));
+                });
+        this.addRenderableWidget(rotationButton);
+
+        // Place Structure Button
+        this.addRenderableWidget(
+                Button.builder(Component.literal("Place Structure"), button -> {
+                            // Handle button click
+                            sendPlaceStructurePacket();
+                        })
+                        .bounds(leftPos + 10, inputsStartY + 30, 150, 20)
+                        .build()
+        );
+    }
+
+    private void createSchematicButtons() {
         int startY = topPos + 20;
-        int buttonHeight = 10; // Reduced height since we're only rendering text
+        int buttonHeight = 10; // Adjust as needed
         int x = leftPos + 10;  // Adjust padding as needed
 
-        // Clear the list of buttons in case init() is called multiple times
+        // Clear the list of buttons in case createSchematicButtons() is called multiple times
         schematicButtons.clear();
 
         for (int i = 0; i < schematics.size(); i++) {
@@ -106,61 +194,6 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             schematicButtons.add(button);
             this.addRenderableWidget(button);
         }
-
-        // Add input fields and place button
-        int inputFieldWidth = 50;
-        int inputFieldHeight = 20;
-        int inputsStartY = topPos + imageHeight - 80;
-
-        // X Position
-        posXField = new EditBox(this.font, leftPos + 10, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("X"));
-        posXField.setValue(String.valueOf(this.minecraft.player.getBlockX()));
-        this.addRenderableWidget(posXField);
-
-        // Y Position
-        posYField = new EditBox(this.font, leftPos + 70, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Y"));
-        posYField.setValue(String.valueOf(this.minecraft.player.getBlockY()));
-        this.addRenderableWidget(posYField);
-
-        // Z Position
-        posZField = new EditBox(this.font, leftPos + 130, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
-        posZField.setValue(String.valueOf(this.minecraft.player.getBlockZ()));
-        this.addRenderableWidget(posZField);
-
-        // Rotation input field
-        rotationField = new EditBox(this.font, leftPos + 190, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Rotation"));
-        rotationField.setValue("0");
-        this.addRenderableWidget(rotationField);
-
-        // Place Structure Button
-        this.addRenderableWidget(
-                Button.builder(Component.literal("Place Structure"), button -> {
-                            // Handle button click
-                            sendPlaceStructurePacket();
-                        })
-                        .bounds(leftPos + 10, inputsStartY + 30, 150, 20)
-                        .build()
-        );
-
-        // Load stored values from the block entity
-        PrinterBlockEntity blockEntity = menu.getBlockEntity();
-        if (blockEntity.getStoredTargetPos() != null) {
-            posXField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getX()));
-            posYField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getY()));
-            posZField.setValue(String.valueOf(blockEntity.getStoredTargetPos().getZ()));
-        }
-
-        if (blockEntity.getStoredRotation() != null) {
-            rotationField.setValue(String.valueOf(getDegreesFromRotation(blockEntity.getStoredRotation())));
-        }
-
-        if (blockEntity.getStoredSchematicName() != null) {
-            selectedSchematicName = blockEntity.getStoredSchematicName();
-            selectedIndex = schematics.indexOf(selectedSchematicName);
-
-            // Update the button colors to reflect the stored selection
-            updateSchematicButtonColors();
-        }
     }
 
 
@@ -169,10 +202,10 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             int x = Integer.parseInt(posXField.getValue());
             int y = Integer.parseInt(posYField.getValue());
             int z = Integer.parseInt(posZField.getValue());
-            int rotationDegrees = Integer.parseInt(rotationField.getValue());
+            int rotationDegrees = rotationButton.getValue();
 
             // Convert degrees to Minecraft Rotation enum
-            Rotation rotation = switch (rotationDegrees % 360) {
+            Rotation rotation = switch (rotationDegrees) {
                 case 90 -> Rotation.CLOCKWISE_90;
                 case 180 -> Rotation.CLOCKWISE_180;
                 case 270 -> Rotation.COUNTERCLOCKWISE_90;
@@ -193,9 +226,11 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             ));
 
         } catch (NumberFormatException e) {
-            System.out.println("Invalid position or rotation");
+            System.out.println("Invalid position");
         }
     }
+
+
 
 
     @Override

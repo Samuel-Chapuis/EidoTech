@@ -18,7 +18,9 @@ public class ModNetworking {
         int id = 0;
         INSTANCE.registerMessage(id++, PlaceStructurePacket.class, PlaceStructurePacket::toBytes, PlaceStructurePacket::new, PlaceStructurePacket::handle);
         INSTANCE.registerMessage(id++, SchematicSelectionPacket.class, SchematicSelectionPacket::toBytes, SchematicSelectionPacket::new, SchematicSelectionPacket::handle);
+        INSTANCE.registerMessage(id++, RotationChangePacket.class, RotationChangePacket::toBytes, RotationChangePacket::new, RotationChangePacket::handle);
         // Register other packets here
     }
 }
+
 
