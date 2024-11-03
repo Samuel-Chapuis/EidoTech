@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.AABB;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.File;
@@ -233,6 +234,11 @@ public class PrinterBlockEntity extends BlockEntity {
         // Console output for debugging
         System.out.println("Set Target Position in PrinterBlockEntity at " + getBlockPos());
         System.out.println("Target Position: " + storedTargetPos);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        return INFINITE_EXTENT_AABB;
     }
 
 

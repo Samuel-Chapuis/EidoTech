@@ -49,13 +49,14 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             return;
         }
 
-        // Calculate position and rotation
+        // Get the target position and rotation
         BlockPos targetPos = blockEntity.getStoredTargetPos();
         Rotation rotation = blockEntity.getStoredRotation() != null ? blockEntity.getStoredRotation() : Rotation.NONE;
 
         // Render the structure
-        renderStructure(template, targetPos, rotation, poseStack, bufferSource, combinedLight);
+        renderStructure(template, blockEntity.getBlockPos(), targetPos, rotation, poseStack, bufferSource, combinedLight);
     }
+
 
     private StructureTemplate loadStructure(String schematicName) {
         // Get the schematics folder in the game directory
@@ -88,7 +89,7 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
         return template;
     }
 
-    private void renderStructure(StructureTemplate template, BlockPos pos, Rotation rotation, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
+    private void renderStructure(StructureTemplate template, BlockPos blockEntityPos, BlockPos targetPos, Rotation rotation, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
         Level clientLevel = Minecraft.getInstance().level;
         if (clientLevel == null) {
             return;
@@ -96,13 +97,13 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
 
         poseStack.pushPose();
 
-        int dx = pos.getX();
-        int dy = pos.getY();
-        int dz = pos.getZ();
+        // Calculate the offset from the block entity position to the target position
+        double offsetX = targetPos.getX() - blockEntityPos.getX();
+        double offsetY = targetPos.getY() - blockEntityPos.getY();
+        double offsetZ = targetPos.getZ() - blockEntityPos.getZ();
 
-        System.out.println("Rendering structure at " + dx + ", " + dy + ", " + dz);
-
-        poseStack.translate(dx, dy, dz);
+        // Translate pose stack by the offset to the target position
+        poseStack.translate(offsetX, offsetY, offsetZ);
 
         StructurePlaceSettings placeSettings = new StructurePlaceSettings().setRotation(rotation);
 
@@ -130,12 +131,12 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             BlockPos localPos = blockInfo.pos();
 
             // Apply rotation to local position
-            BlockPos rotatedPos = StructureTemplate.calculateRelativePosition(placeSettings, localPos).subtract(pos);
+            BlockPos rotatedPos = StructureTemplate.calculateRelativePosition(placeSettings, localPos);
 
             // Push matrix for the block
             poseStack.pushPose();
 
-            // Translate to block position
+            // Translate to block position within the structure
             poseStack.translate(rotatedPos.getX(), rotatedPos.getY(), rotatedPos.getZ());
 
             // Render the block
