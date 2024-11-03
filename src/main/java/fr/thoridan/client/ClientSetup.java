@@ -1,7 +1,7 @@
 package fr.thoridan.client;
 
 import fr.thoridan.Techutilities;
-import fr.thoridan.client.PrinterScreen;
+import fr.thoridan.client.printer.ui.PrinterScreen;
 import fr.thoridan.menu.ModMenus;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;

@@ -1,4 +1,4 @@
-package fr.thoridan.network;
+package fr.thoridan.network.printer;
 
 import fr.thoridan.block.PrinterBlockEntity;
 import net.minecraft.core.BlockPos;

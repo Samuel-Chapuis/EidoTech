@@ -1,4 +1,4 @@
-package fr.thoridan.client;
+package fr.thoridan.client.printer.render;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 

@@ -1,4 +1,4 @@
-package fr.thoridan.client.widget;
+package fr.thoridan.client.printer.widget;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
