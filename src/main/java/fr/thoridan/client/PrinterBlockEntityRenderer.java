@@ -1,23 +1,21 @@
-package fr.thoridan.client.renderer;
+package fr.thoridan.client;
 
 import fr.thoridan.block.PrinterBlockEntity;
+import fr.thoridan.client.PrinterScreen;
+
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraft.world.phys.AABB;
 import com.mojang.blaze3d.vertex.PoseStack;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -27,7 +25,6 @@ import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
 import java.util.List;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 
 public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBlockEntity> {
 
@@ -99,9 +96,11 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
 
         poseStack.pushPose();
 
-        double dx = pos.getX() - Minecraft.getInstance().player.getX();
-        double dy = pos.getY() - Minecraft.getInstance().player.getY();
-        double dz = pos.getZ() - Minecraft.getInstance().player.getZ();
+        int dx = pos.getX();
+        int dy = pos.getY();
+        int dz = pos.getZ();
+
+        System.out.println("Rendering structure at " + dx + ", " + dy + ", " + dz);
 
         poseStack.translate(dx, dy, dz);
 

@@ -29,8 +29,9 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private List<TextButton> schematicButtons = new ArrayList<>();
     private CycleButton<Integer> rotationButton;
     private int selectedIndex = -1;
-    private EditBox posXField;
     private String selectedSchematicName = null;
+
+    private EditBox posXField;
     private EditBox posYField;
     private EditBox posZField;
 
@@ -290,6 +291,24 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         } catch (NumberFormatException e) {
             System.out.println("Invalid position");
         }
+    }
+
+    public int getSchematicX() {
+        int x = Integer.parseInt(posXField.getValue());
+        System.out.println("X: " + x);
+        return x;
+    }
+
+    public int getSchematicY() {
+        int y = Integer.parseInt(posYField.getValue());
+        System.out.println("Y: " + y);
+        return y;
+    }
+
+    public int getSchematicZ() {
+        int z = Integer.parseInt(posZField.getValue());
+        System.out.println("Z: " + z);
+        return z;
     }
 
 }
