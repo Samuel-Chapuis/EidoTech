@@ -1,10 +1,17 @@
 package fr.thoridan.client;
 
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import fr.thoridan.block.PrinterBlockEntity;
 import fr.thoridan.client.PrinterScreen;
 
+import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
@@ -139,15 +146,53 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             // Translate to block position within the structure
             poseStack.translate(rotatedPos.getX(), rotatedPos.getY(), rotatedPos.getZ());
 
-            // Render the block
-            Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, bufferSource, combinedLight, OverlayTexture.NO_OVERLAY);
+            // Render the block with translucency
+            renderTransparentBlock(state, poseStack, bufferSource, combinedLight);
 
             // Pop matrix for the block
             poseStack.popPose();
         }
 
         poseStack.popPose();
+
+        // If bufferSource is a BufferSource, flush the buffers
+        if (bufferSource instanceof MultiBufferSource.BufferSource) {
+            ((MultiBufferSource.BufferSource) bufferSource).endBatch();
+        }
     }
+
+
+    private void renderTransparentBlock(BlockState state, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
+        BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
+        BakedModel model = blockRenderer.getBlockModel(state);
+
+        // Set the desired alpha value (0.0F = fully transparent, 1.0F = fully opaque)
+        float alpha = 0.5F; // Adjust this value as needed
+
+        // Use the translucent render type
+        RenderType renderType = RenderType.translucent();
+
+        // Get the original VertexConsumer
+        VertexConsumer originalConsumer = bufferSource.getBuffer(renderType);
+
+        // Wrap it with our AlphaAdjustingVertexConsumer
+        VertexConsumer alphaConsumer = new AlphaAdjustingVertexConsumer(originalConsumer, alpha);
+
+        // Render the block using the alpha-adjusted VertexConsumer
+        blockRenderer.getModelRenderer().renderModel(
+                poseStack.last(),
+                alphaConsumer,
+                state,
+                model,
+                1.0F, 1.0F, 1.0F, // RGB colors
+                combinedLight,
+                OverlayTexture.NO_OVERLAY
+        );
+    }
+
+
+
+
 
     @Override
     public boolean shouldRenderOffScreen(PrinterBlockEntity blockEntity) {
