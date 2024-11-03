@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -112,7 +113,11 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
         // Translate pose stack by the offset to the target position
         poseStack.translate(offsetX, offsetY, offsetZ);
 
-        StructurePlaceSettings placeSettings = new StructurePlaceSettings().setRotation(rotation);
+        StructurePlaceSettings placeSettings = new StructurePlaceSettings()
+                .setRotation(rotation)
+                .setMirror(Mirror.NONE)
+                .setIgnoreEntities(false)
+                .setFinalizeEntities(true);
 
         // Use reflection to access the private 'palettes' field
         List<StructureTemplate.StructureBlockInfo> blockInfos;
@@ -140,6 +145,9 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             // Apply rotation to local position
             BlockPos rotatedPos = StructureTemplate.calculateRelativePosition(placeSettings, localPos);
 
+            // Rotate the block state
+            BlockState rotatedState = state.rotate(placeSettings.getRotation());
+
             // Push matrix for the block
             poseStack.pushPose();
 
@@ -147,7 +155,7 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             poseStack.translate(rotatedPos.getX(), rotatedPos.getY(), rotatedPos.getZ());
 
             // Render the block with translucency
-            renderTransparentBlock(state, poseStack, bufferSource, combinedLight);
+            renderTransparentBlock(rotatedState, poseStack, bufferSource, combinedLight);
 
             // Pop matrix for the block
             poseStack.popPose();
