@@ -1,8 +1,12 @@
-package fr.thoridan.client.printer.render;
+package fr.thoridan.client;
 
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import fr.thoridan.block.PrinterBlockEntity;
+import fr.thoridan.client.PrinterScreen;
 
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;

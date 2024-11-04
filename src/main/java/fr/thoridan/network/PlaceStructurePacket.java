@@ -1,29 +1,37 @@
-package fr.thoridan.network.printer;
+package fr.thoridan.network;
 
 import fr.thoridan.block.PrinterBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraftforge.network.NetworkEvent;
-
 import java.util.function.Supplier;
 
-public class PositionUpdatePacket {
+public class PlaceStructurePacket {
     private final BlockPos blockEntityPos;
     private final BlockPos targetPos;
+    private final Rotation rotation;
+    private final String schematicName; // Add this field
 
-    public PositionUpdatePacket(BlockPos blockEntityPos, BlockPos targetPos) {
+    public PlaceStructurePacket(BlockPos blockEntityPos, int x, int y, int z, Rotation rotation, String schematicName) {
         this.blockEntityPos = blockEntityPos;
-        this.targetPos = targetPos;
+        this.targetPos = new BlockPos(x, y, z);
+        this.rotation = rotation;
+        this.schematicName = schematicName;
     }
 
-    public PositionUpdatePacket(FriendlyByteBuf buf) {
+    public PlaceStructurePacket(FriendlyByteBuf buf) {
         this.blockEntityPos = buf.readBlockPos();
         this.targetPos = buf.readBlockPos();
+        this.rotation = buf.readEnum(Rotation.class);
+        this.schematicName = buf.readUtf(32767); // Read the schematic name
     }
 
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeBlockPos(blockEntityPos);
         buf.writeBlockPos(targetPos);
+        buf.writeEnum(rotation);
+        buf.writeUtf(schematicName); // Write the schematic name
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
@@ -33,11 +41,12 @@ public class PositionUpdatePacket {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
                 if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    // Update the block entity's stored target position
-                    printerBlockEntity.setTargetPos(targetPos);
+                    // Place the structure without updating stored parameters
+                    printerBlockEntity.placeStructureAt(targetPos, rotation, schematicName);
                 }
             }
         });
         ctx.get().setPacketHandled(true);
     }
+
 }
