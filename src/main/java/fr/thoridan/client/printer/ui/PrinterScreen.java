@@ -1,9 +1,13 @@
-package fr.thoridan.client;
+package fr.thoridan.client.printer.ui;
 import fr.thoridan.Techutilities;
 import fr.thoridan.block.PrinterBlockEntity;
-import fr.thoridan.client.widget.TextButton;
+import fr.thoridan.client.printer.widget.TextButton;
 import fr.thoridan.menu.PrinterMenu;
 import fr.thoridan.network.*;
+import fr.thoridan.network.printer.PlaceStructurePacket;
+import fr.thoridan.network.printer.PositionUpdatePacket;
+import fr.thoridan.network.printer.RotationChangePacket;
+import fr.thoridan.network.printer.SchematicSelectionPacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
@@ -16,11 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.core.Rotations;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.world.level.block.Rotation;
-
 
 
 public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {

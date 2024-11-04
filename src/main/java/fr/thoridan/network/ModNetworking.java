@@ -1,6 +1,10 @@
 package fr.thoridan.network;
 
 import fr.thoridan.Techutilities;
+import fr.thoridan.network.printer.PlaceStructurePacket;
+import fr.thoridan.network.printer.PositionUpdatePacket;
+import fr.thoridan.network.printer.RotationChangePacket;
+import fr.thoridan.network.printer.SchematicSelectionPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
