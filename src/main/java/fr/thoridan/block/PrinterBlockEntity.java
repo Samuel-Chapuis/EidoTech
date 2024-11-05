@@ -1,17 +1,21 @@
 package fr.thoridan.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.*;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -19,16 +23,31 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.items.ItemStackHandler;
 
+import java.util.ArrayList;
+import java.util.function.Predicate;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureBlockInfo;
+
+
+
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class PrinterBlockEntity extends BlockEntity {
     private BlockPos storedTargetPos;
     private Rotation storedRotation;
     private String storedSchematicName;
+    
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
@@ -88,7 +107,48 @@ public class PrinterBlockEntity extends BlockEntity {
                 .setIgnoreEntities(false)
                 .setFinalizeEntities(true);
 
-        // Place the structure in the world
+        // Map to store required blocks and counts
+        Map<Item, Integer> requiredItems = new HashMap<>();
+
+        // Read the palette from NBT data
+        ListTag paletteTag = nbtData.getList("palette", Tag.TAG_COMPOUND);
+        List<BlockState> palette = new ArrayList<>();
+        for (int i = 0; i < paletteTag.size(); i++) {
+            CompoundTag stateTag = paletteTag.getCompound(i);
+            BlockState state = NbtUtils.readBlockState(holderGetter, stateTag);
+            palette.add(state);
+        }
+
+        // Read the blocks from NBT data
+        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
+        for (int i = 0; i < blocksTag.size(); i++) {
+            CompoundTag blockTag = blocksTag.getCompound(i);
+            ListTag posList = blockTag.getList("pos", Tag.TAG_INT);
+            int x = posList.getInt(0);
+            int y = posList.getInt(1);
+            int z = posList.getInt(2);
+            int stateId = blockTag.getInt("state");
+
+            BlockState blockState = palette.get(stateId);
+            // Apply rotation to the block state
+            blockState = blockState.rotate(rotation);
+
+            Item item = blockState.getBlock().asItem();
+            if (item != Items.AIR) {
+                requiredItems.put(item, requiredItems.getOrDefault(item, 0) + 1);
+            }
+        }
+
+        // Check if the inventory has enough items
+        if (!hasRequiredItems(requiredItems)) {
+            System.out.println("Not enough items to place the structure");
+            return;
+        }
+
+        // Consume items from the inventory
+        consumeItems(requiredItems);
+
+        // Place the structure
         boolean success = template.placeInWorld(serverLevel, targetPos, targetPos, settings, serverLevel.random, 2);
 
         if (!success) {
@@ -96,9 +156,60 @@ public class PrinterBlockEntity extends BlockEntity {
         }
     }
 
+
+
+    private boolean hasRequiredItems(Map<Item, Integer> requiredItems) {
+        Map<Item, Integer> inventoryItems = new HashMap<>();
+
+        for (int i = 0; i < itemHandler.getSlots(); i++) {
+            ItemStack stack = itemHandler.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                Item item = stack.getItem();
+                inventoryItems.put(item, inventoryItems.getOrDefault(item, 0) + stack.getCount());
+            }
+        }
+
+        for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
+            Item item = entry.getKey();
+            int requiredCount = entry.getValue();
+            int availableCount = inventoryItems.getOrDefault(item, 0);
+
+            if (availableCount < requiredCount) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void consumeItems(Map<Item, Integer> requiredItems) {
+        for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
+            Item item = entry.getKey();
+            int remaining = entry.getValue();
+
+            for (int i = 0; i < itemHandler.getSlots(); i++) {
+                ItemStack stack = itemHandler.getStackInSlot(i);
+                if (stack.getItem() == item) {
+                    int count = Math.min(stack.getCount(), remaining);
+                    stack.shrink(count);
+                    remaining -= count;
+
+                    if (stack.isEmpty()) {
+                        itemHandler.setStackInSlot(i, ItemStack.EMPTY);
+                    }
+
+                    if (remaining <= 0) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+
     @Override
     public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        tag.put("inventory", itemHandler.serializeNBT());
         if (storedTargetPos != null) {
             tag.putInt("TargetX", storedTargetPos.getX());
             tag.putInt("TargetY", storedTargetPos.getY());
@@ -122,6 +233,7 @@ public class PrinterBlockEntity extends BlockEntity {
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
+        itemHandler.deserializeNBT(tag.getCompound("inventory"));
         if (tag.contains("TargetX") && tag.contains("TargetY") && tag.contains("TargetZ")) {
             storedTargetPos = new BlockPos(tag.getInt("TargetX"), tag.getInt("TargetY"), tag.getInt("TargetZ"));
         } else {
@@ -239,6 +351,34 @@ public class PrinterBlockEntity extends BlockEntity {
     @Override
     public AABB getRenderBoundingBox() {
         return INFINITE_EXTENT_AABB;
+    }
+
+    private final ItemStackHandler itemHandler = new ItemStackHandler(27) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+            if (level != null && !level.isClientSide()) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
+        }
+    };
+
+    // Then declare lazyItemHandler
+    private final LazyOptional<ItemStackHandler> lazyItemHandler = LazyOptional.of(() -> itemHandler);
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        lazyItemHandler.invalidate();
+    }
+
+
+    @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
+        if (capability == ForgeCapabilities.ITEM_HANDLER) {
+            return lazyItemHandler.cast();
+        }
+        return super.getCapability(capability, side);
     }
 
 

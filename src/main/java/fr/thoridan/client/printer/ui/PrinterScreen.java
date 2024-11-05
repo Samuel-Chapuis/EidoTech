@@ -1,4 +1,5 @@
 package fr.thoridan.client.printer.ui;
+import com.mojang.blaze3d.systems.RenderSystem;
 import fr.thoridan.Techutilities;
 import fr.thoridan.block.PrinterBlockEntity;
 import fr.thoridan.client.printer.widget.TextButton;
@@ -10,6 +11,7 @@ import fr.thoridan.network.printer.RotationChangePacket;
 import fr.thoridan.network.printer.SchematicSelectionPacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -46,7 +48,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 //        // Recalculate leftPos and topPos based on new dimensions
 //        this.leftPos = (screenWidth - this.imageWidth) / 2;
 //        this.topPos = (screenHeight - this.imageHeight) / 2;
-        this.imageWidth = 256;
+        this.imageWidth = 176; //256
         this.imageHeight = 166;
         this.schematics = new ArrayList<>();
         loadSchematics();
@@ -232,21 +234,21 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int mouseX, int mouseY) {
+        // Draw the background texture
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, TEXTURE);
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, this.imageWidth, this.imageHeight);
+
+        // The slots are rendered automatically by the parent class
     }
+
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-//        // Draw custom title
-//        int titleX = (this.imageWidth - this.font.width("NBT Printer")) / 2;
-//        guiGraphics.drawString(this.font, "NBT Printer", titleX, 10, 0xFFFFFF, false);
-//
-//        // Render labels for input fields
-//        guiGraphics.drawString(this.font, "X:", posXField.getX() - this.leftPos - 15, posXField.getY() - this.topPos + 6, 0xFFFFFF, false);
-//        guiGraphics.drawString(this.font, "Y:", posYField.getX() - this.leftPos - 15, posYField.getY() - this.topPos + 6, 0xFFFFFF, false);
-//        guiGraphics.drawString(this.font, "Z:", posZField.getX() - this.leftPos - 15, posZField.getY() - this.topPos + 6, 0xFFFFFF, false);
-//        guiGraphics.drawString(this.font, "Rot:", rotationField.getX() - this.leftPos - 25, rotationField.getY() - this.topPos + 6, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, this.title, 8, 6, 4210752, false);
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, this.imageHeight - 94, 4210752, false);
     }
+
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
@@ -254,6 +256,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
+
 
     private void updateSchematicButtonColors() {
         for (int i = 0; i < schematicButtons.size(); i++) {
