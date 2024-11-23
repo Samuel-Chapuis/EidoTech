@@ -81,7 +81,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
         // Initialize input fields first
         // X Position
-        posXField = new EditBox(this.font, leftPos + 10, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("X"));
+        posXField = new EditBox(this.font, leftPos - inputFieldWidth - 10, topPos, inputFieldWidth, inputFieldHeight, Component.literal("X"));
         posXField.setValue(String.valueOf(this.minecraft.player.getBlockX()));
         this.addRenderableWidget(posXField);
 
