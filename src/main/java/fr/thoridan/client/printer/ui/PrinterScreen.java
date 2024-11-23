@@ -81,17 +81,17 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
         // Initialize input fields first
         // X Position
-        posXField = new EditBox(this.font, leftPos - inputFieldWidth - 10, topPos, inputFieldWidth, inputFieldHeight, Component.literal("X"));
+        posXField = new EditBox(this.font, leftPos - 3*( inputFieldWidth + 10), topPos + inputFieldHeight + 10, inputFieldWidth, inputFieldHeight, Component.literal("X"));
         posXField.setValue(String.valueOf(this.minecraft.player.getBlockX()));
         this.addRenderableWidget(posXField);
 
         // Y Position
-        posYField = new EditBox(this.font, leftPos + 70, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Y"));
+        posYField = new EditBox(this.font, leftPos - 2*( inputFieldWidth + 10), topPos + inputFieldHeight + 10, inputFieldWidth, inputFieldHeight, Component.literal("Y"));
         posYField.setValue(String.valueOf(this.minecraft.player.getBlockY()));
         this.addRenderableWidget(posYField);
 
         // Z Position
-        posZField = new EditBox(this.font, leftPos + 130, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
+        posZField = new EditBox(this.font, leftPos - 1*( inputFieldWidth + 10), topPos + inputFieldHeight + 10, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
         posZField.setValue(String.valueOf(this.minecraft.player.getBlockZ()));
         this.addRenderableWidget(posZField);
 
@@ -129,7 +129,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
                 .withValues(0, 90, 180, 270)
                 .displayOnlyValue()
                 .withInitialValue(initialRotationDegrees)
-                .create(leftPos + 190, inputsStartY, inputFieldWidth, inputFieldHeight, Component.literal("Rotation"), (button, value) -> {
+                .create(leftPos - 9 - inputFieldWidth, topPos, inputFieldWidth, inputFieldHeight, Component.literal("Rotation"), (button, value) -> {
                     // Handle rotation change
                     Rotation rotation = switch (value) {
                         case 90 -> Rotation.CLOCKWISE_90;
@@ -152,15 +152,15 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
                             // Handle button click
                             sendPlaceStructurePacket();
                         })
-                        .bounds(leftPos + 10, inputsStartY + 30, 150, 20)
+                        .bounds(leftPos - 100 - 31 - inputFieldWidth, topPos, 100, 20)
                         .build()
         );
     }
 
     private void createSchematicButtons() {
-        int startY = topPos + 20;
+        int startY = topPos + 60;
         int buttonHeight = 10; // Adjust as needed
-        int x = leftPos + 10;  // Adjust padding as needed
+        int x = leftPos - 100 - 31 - 50;  // Adjust padding as needed
 
         // Clear the list of buttons in case createSchematicButtons() is called multiple times
         schematicButtons.clear();
