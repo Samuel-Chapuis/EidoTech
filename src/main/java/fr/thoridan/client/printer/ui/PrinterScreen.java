@@ -28,6 +28,8 @@ import net.minecraft.client.gui.components.CycleButton;
 
 public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(Techutilities.MODID, "textures/gui/printer_gui.png");
+    private static final ResourceLocation SECOND_TEXTURE = new ResourceLocation(Techutilities.MODID, "textures/gui/second_image.png");
+
     private List<String> schematics;
     private List<TextButton> schematicButtons = new ArrayList<>();
     private CycleButton<Integer> rotationButton;
@@ -41,14 +43,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
         super(menu, inv, titleIn);
-//        int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-//        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-//        this.imageWidth = (int) (screenWidth * 0.8);
-//        this.imageHeight = (int) (screenHeight * 0.8);
-//        // Recalculate leftPos and topPos based on new dimensions
-//        this.leftPos = (screenWidth - this.imageWidth) / 2;
-//        this.topPos = (screenHeight - this.imageHeight) / 2;
-        this.imageWidth = 176; //256
+        this.imageWidth = 176;
         this.imageHeight = 166;
         this.schematics = new ArrayList<>();
         loadSchematics();
@@ -81,17 +76,17 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
         // Initialize input fields first
         // X Position
-        posXField = new EditBox(this.font, leftPos - 3*( inputFieldWidth + 10), topPos + inputFieldHeight + 10, inputFieldWidth, inputFieldHeight, Component.literal("X"));
+        posXField = new EditBox(this.font, leftPos - 3*( inputFieldWidth + 10), topPos + inputFieldHeight + 15, inputFieldWidth, inputFieldHeight, Component.literal("X"));
         posXField.setValue(String.valueOf(this.minecraft.player.getBlockX()));
         this.addRenderableWidget(posXField);
 
         // Y Position
-        posYField = new EditBox(this.font, leftPos - 2*( inputFieldWidth + 10), topPos + inputFieldHeight + 10, inputFieldWidth, inputFieldHeight, Component.literal("Y"));
+        posYField = new EditBox(this.font, leftPos - 2*( inputFieldWidth + 10), topPos + inputFieldHeight + 15, inputFieldWidth, inputFieldHeight, Component.literal("Y"));
         posYField.setValue(String.valueOf(this.minecraft.player.getBlockY()));
         this.addRenderableWidget(posYField);
 
         // Z Position
-        posZField = new EditBox(this.font, leftPos - 1*( inputFieldWidth + 10), topPos + inputFieldHeight + 10, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
+        posZField = new EditBox(this.font, leftPos - 1*( inputFieldWidth + 10), topPos + inputFieldHeight + 15, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
         posZField.setValue(String.valueOf(this.minecraft.player.getBlockZ()));
         this.addRenderableWidget(posZField);
 
@@ -129,7 +124,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
                 .withValues(0, 90, 180, 270)
                 .displayOnlyValue()
                 .withInitialValue(initialRotationDegrees)
-                .create(leftPos - 9 - inputFieldWidth, topPos, inputFieldWidth, inputFieldHeight, Component.literal("Rotation"), (button, value) -> {
+                .create(leftPos - 9 - inputFieldWidth, topPos + 5, inputFieldWidth, inputFieldHeight, Component.literal("Rotation"), (button, value) -> {
                     // Handle rotation change
                     Rotation rotation = switch (value) {
                         case 90 -> Rotation.CLOCKWISE_90;
@@ -152,13 +147,13 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
                             // Handle button click
                             sendPlaceStructurePacket();
                         })
-                        .bounds(leftPos - 100 - 31 - inputFieldWidth, topPos, 100, 20)
+                        .bounds(leftPos - 100 - 31 - inputFieldWidth, topPos + 5, 100, 20)
                         .build()
         );
     }
 
     private void createSchematicButtons() {
-        int startY = topPos + 60;
+        int startY = topPos + 65;
         int buttonHeight = 10; // Adjust as needed
         int x = leftPos - 100 - 31 - 50;  // Adjust padding as needed
 
@@ -234,13 +229,18 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int mouseX, int mouseY) {
-        // Draw the background texture
+        // Draw the main background texture
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, TEXTURE);
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, this.imageWidth, this.imageHeight);
 
-        // The slots are rendered automatically by the parent class
+        // Now draw the additional background texture
+        RenderSystem.setShaderTexture(0, SECOND_TEXTURE);
+        // For example, let's position it at (leftPos + 50, topPos + 50) with a width and height of 100 pixels
+        guiGraphics.blit(SECOND_TEXTURE, leftPos - 180, topPos, 0, 0, 180, 166);
     }
+
+
 
 
     @Override
