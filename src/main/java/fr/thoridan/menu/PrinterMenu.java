@@ -6,17 +6,11 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.SlotItemHandler;
-import net.minecraftforge.network.IContainerFactory;
-import net.minecraftforge.registries.ObjectHolder;
-import fr.thoridan.menu.ModMenus;
 import fr.thoridan.block.PrinterBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -31,11 +25,14 @@ public class PrinterMenu extends AbstractContainerMenu {
         this(windowId, playerInventory, playerInventory.player.level().getBlockEntity(data.readBlockPos()));
     }
 
+
     public PrinterMenu(int windowId, Inventory playerInventory, BlockEntity entity) {
         super(ModMenus.PRINTER_MENU.get(), windowId);
         this.blockEntity = (PrinterBlockEntity) entity;
         this.level = playerInventory.player.level();
         this.pos = blockEntity.getBlockPos();
+
+
         // Add slots for Printer inventory (3 rows x 9 columns)
         addPrinterInventorySlots(playerInventory);
         // Add player inventory slots
@@ -67,7 +64,7 @@ public class PrinterMenu extends AbstractContainerMenu {
                 int index = col + row * 9;
                 int x = startX + col * slotSizePlus2;
                 int y = startY + row * slotSizePlus2;
-                this.addSlot(new SlotItemHandler(handler, index, x, y));
+                this.addSlot(new CustomSlotItemHandler(handler, index, x, y));
             }
         }
     }
@@ -101,20 +98,20 @@ public class PrinterMenu extends AbstractContainerMenu {
         Slot slot = this.slots.get(index);
 
         if (slot != null && slot.hasItem()) {
-            ItemStack stack = slot.getItem();
-            itemstack = stack.copy();
+            ItemStack stackInSlot = slot.getItem();
+            itemstack = stackInSlot.copy();
 
-            if (index < 27) { // Shift-clicked in printer inventory
-                if (!this.moveItemStackTo(stack, 27, this.slots.size(), true)) {
+            if (index < 27) { // From printer inventory to player inventory
+                if (!this.moveItemStackTo(stackInSlot, 27, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else { // Shift-clicked in player inventory
-                if (!this.moveItemStackTo(stack, 0, 27, false)) {
+            } else { // From player inventory to printer inventory
+                if (!this.moveItemStackTo(stackInSlot, 0, 27, false)) {
                     return ItemStack.EMPTY;
                 }
             }
 
-            if (stack.isEmpty()) {
+            if (stackInSlot.getCount() == 0) {
                 slot.set(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
@@ -123,5 +120,67 @@ public class PrinterMenu extends AbstractContainerMenu {
 
         return itemstack;
     }
+
+    @Override
+    protected boolean moveItemStackTo(ItemStack stack, int startIndex, int endIndex, boolean reverseDirection) {
+        boolean flag = false;
+        int i = startIndex;
+
+        if (reverseDirection) {
+            i = endIndex - 1;
+        }
+
+        while (stack.getCount() > 0 && (reverseDirection ? i >= startIndex : i < endIndex)) {
+            Slot slot = this.slots.get(i);
+            ItemStack existingStack = slot.getItem();
+
+            if (slot.mayPlace(stack) && ItemStack.isSameItemSameTags(stack, existingStack)) {
+                int maxStackSize = slot.getMaxStackSize(stack);
+
+                int combinedCount = existingStack.getCount() + stack.getCount();
+
+                if (combinedCount <= maxStackSize) {
+                    stack.setCount(0);
+                    existingStack.setCount(combinedCount);
+                    slot.setChanged();
+                    flag = true;
+                } else if (existingStack.getCount() < maxStackSize) {
+                    int remaining = maxStackSize - existingStack.getCount();
+                    stack.shrink(remaining);
+                    existingStack.setCount(maxStackSize);
+                    slot.setChanged();
+                    flag = true;
+                }
+            }
+
+            i += reverseDirection ? -1 : 1;
+        }
+
+        if (stack.getCount() > 0) {
+            i = reverseDirection ? endIndex - 1 : startIndex;
+            while (reverseDirection ? i >= startIndex : i < endIndex) {
+                Slot slot = this.slots.get(i);
+                ItemStack existingStack = slot.getItem();
+
+                if (slot.mayPlace(stack) && existingStack.isEmpty()) {
+                    int maxStackSize = slot.getMaxStackSize(stack);
+                    int count = Math.min(stack.getCount(), maxStackSize);
+
+                    slot.set(stack.split(count));
+                    slot.setChanged();
+                    flag = true;
+
+                    if (stack.getCount() == 0) {
+                        break;
+                    }
+                }
+
+                i += reverseDirection ? -1 : 1;
+            }
+        }
+
+        return flag;
+    }
+
 
 }

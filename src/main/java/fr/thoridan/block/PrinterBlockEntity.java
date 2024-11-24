@@ -1,5 +1,6 @@
 package fr.thoridan.block;
 
+import fr.thoridan.menu.CustomItemStackHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderGetter;
@@ -7,15 +8,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -27,12 +25,9 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.items.IItemHandler;
 
 import java.util.ArrayList;
-import java.util.function.Predicate;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureBlockInfo;
-
 
 
 import javax.annotation.Nullable;
@@ -353,7 +348,7 @@ public class PrinterBlockEntity extends BlockEntity {
         return INFINITE_EXTENT_AABB;
     }
 
-    private final ItemStackHandler itemHandler = new ItemStackHandler(27) {
+    private final CustomItemStackHandler itemHandler = new CustomItemStackHandler(27) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -364,7 +359,8 @@ public class PrinterBlockEntity extends BlockEntity {
     };
 
     // Then declare lazyItemHandler
-    private final LazyOptional<ItemStackHandler> lazyItemHandler = LazyOptional.of(() -> itemHandler);
+    private final LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.of(() -> itemHandler);
+
 
     @Override
     public void setRemoved() {
@@ -380,6 +376,7 @@ public class PrinterBlockEntity extends BlockEntity {
         }
         return super.getCapability(capability, side);
     }
+
 
 
 }

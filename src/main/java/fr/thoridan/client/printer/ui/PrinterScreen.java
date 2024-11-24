@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.client.gui.components.CycleButton;
 
@@ -237,10 +239,8 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         // Now draw the additional background texture
         RenderSystem.setShaderTexture(0, SECOND_TEXTURE);
         // For example, let's position it at (leftPos + 50, topPos + 50) with a width and height of 100 pixels
-        guiGraphics.blit(SECOND_TEXTURE, leftPos - 180, topPos, 0, 0, 180, 166);
+        guiGraphics.blit(SECOND_TEXTURE, leftPos - 185, topPos, 0, 0, 180, 166);
     }
-
-
 
 
     @Override
@@ -250,12 +250,29 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     }
 
 
+//    @Override
+//    protected void renderSlot(GuiGraphics guiGraphics, Slot slot) {
+//        super.renderSlot(guiGraphics, slot);
+//        ItemStack stack = slot.getItem();
+//        if (!stack.isEmpty() && stack.getCount() > 99) {
+//            // Render the item count manually
+//            String countText = Integer.toString(stack.getCount());
+//            int x = slot.x + this.leftPos;
+//            int y = slot.y + this.topPos;
+//            guiGraphics.drawString(this.font, countText, x + 19 - 2 - this.font.width(countText), y + 6 + 3, 16777215, true);
+//        }
+//    }
+
+
+
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         this.renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
+
+
 
 
     private void updateSchematicButtonColors() {
