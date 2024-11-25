@@ -1,10 +1,7 @@
 package fr.thoridan.network;
 
 import fr.thoridan.Techutilities;
-import fr.thoridan.network.printer.PlaceStructurePacket;
-import fr.thoridan.network.printer.PositionUpdatePacket;
-import fr.thoridan.network.printer.RotationChangePacket;
-import fr.thoridan.network.printer.SchematicSelectionPacket;
+import fr.thoridan.network.printer.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -24,6 +21,7 @@ public class ModNetworking {
         INSTANCE.registerMessage(id++, SchematicSelectionPacket.class, SchematicSelectionPacket::toBytes, SchematicSelectionPacket::new, SchematicSelectionPacket::handle);
         INSTANCE.registerMessage(id++, RotationChangePacket.class, RotationChangePacket::toBytes, RotationChangePacket::new, RotationChangePacket::handle);
         INSTANCE.registerMessage(id++, PositionUpdatePacket.class, PositionUpdatePacket::toBytes, PositionUpdatePacket::new, PositionUpdatePacket::handle);
+        INSTANCE.registerMessage(id++, MissingItemsPacket.class, MissingItemsPacket::toBytes, MissingItemsPacket::new, MissingItemsPacket::handle);
         // Register other packets here
     }
 }

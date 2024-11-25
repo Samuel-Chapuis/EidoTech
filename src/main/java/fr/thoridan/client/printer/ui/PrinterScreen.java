@@ -19,10 +19,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.client.gui.components.CycleButton;
@@ -31,7 +35,7 @@ import net.minecraft.client.gui.components.CycleButton;
 public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(Techutilities.MODID, "textures/gui/printer_gui.png");
     private static final ResourceLocation SECOND_TEXTURE = new ResourceLocation(Techutilities.MODID, "textures/gui/second_image.png");
-
+    private Map<Item, Integer> missingItems = Collections.emptyMap();
     private List<String> schematics;
     private List<TextButton> schematicButtons = new ArrayList<>();
     private CycleButton<Integer> rotationButton;
@@ -250,31 +254,6 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     }
 
 
-//    @Override
-//    protected void renderSlot(GuiGraphics guiGraphics, Slot slot) {
-//        super.renderSlot(guiGraphics, slot);
-//        ItemStack stack = slot.getItem();
-//        if (!stack.isEmpty() && stack.getCount() > 99) {
-//            // Render the item count manually
-//            String countText = Integer.toString(stack.getCount());
-//            int x = slot.x + this.leftPos;
-//            int y = slot.y + this.topPos;
-//            guiGraphics.drawString(this.font, countText, x + 19 - 2 - this.font.width(countText), y + 6 + 3, 16777215, true);
-//        }
-//    }
-
-
-
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics);
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
-    }
-
-
-
-
     private void updateSchematicButtonColors() {
         for (int i = 0; i < schematicButtons.size(); i++) {
             TextButton button = schematicButtons.get(i);
@@ -331,5 +310,60 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         System.out.println("Z: " + z);
         return z;
     }
+
+
+    public void setMissingItems(Map<Item, Integer> missingItems) {
+        this.missingItems = missingItems;
+    }
+
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        this.renderBackground(guiGraphics);
+        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
+
+        if (!missingItems.isEmpty()) {
+            renderMissingItemsPopup(guiGraphics, mouseX, mouseY);
+        }
+    }
+
+
+    private void renderMissingItemsPopup(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int popupWidth = 150;
+        int popupHeight = 20 + missingItems.size() * 10;
+        int popupX = (this.width - popupWidth) / 2;
+        int popupY = (this.height - popupHeight) / 2;
+
+        // Draw background
+        guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + popupHeight, 0xAA000000);
+
+        // Draw border using hLine and vLine methods
+        // Top border
+        guiGraphics.hLine(popupX, popupX + popupWidth - 1, popupY, 0xFFFFFFFF);
+        // Bottom border
+        guiGraphics.hLine(popupX, popupX + popupWidth - 1, popupY + popupHeight - 1, 0xFFFFFFFF);
+        // Left border
+        guiGraphics.vLine(popupX, popupY, popupY + popupHeight - 1, 0xFFFFFFFF);
+        // Right border
+        guiGraphics.vLine(popupX + popupWidth - 1, popupY, popupY + popupHeight - 1, 0xFFFFFFFF);
+
+        // Draw title
+        guiGraphics.drawString(this.font, "Missing Items:", popupX + 5, popupY + 5, 0xFFFFFF, false);
+
+        int y = popupY + 20;
+        for (Map.Entry<Item, Integer> entry : missingItems.entrySet()) {
+            String itemName = entry.getKey().getDescription().getString();
+            int count = entry.getValue();
+            String text = count + " x " + itemName;
+            guiGraphics.drawString(this.font, text, popupX + 5, y, 0xFFFFFF, false);
+            y += 10;
+        }
+    }
+
+
+
+
+
 
 }

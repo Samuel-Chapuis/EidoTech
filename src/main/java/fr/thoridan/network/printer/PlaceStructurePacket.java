@@ -3,6 +3,7 @@ package fr.thoridan.network.printer;
 import fr.thoridan.block.PrinterBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
@@ -36,13 +37,13 @@ public class PlaceStructurePacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            var player = ctx.get().getSender();
+            ServerPlayer player = ctx.get().getSender();
             if (player != null) {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
                 if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    // Place the structure without updating stored parameters
-                    printerBlockEntity.placeStructureAt(targetPos, rotation, schematicName);
+                    // Place the structure and pass the player
+                    printerBlockEntity.placeStructureAt(targetPos, rotation, schematicName, player);
                 }
             }
         });

@@ -1,6 +1,8 @@
 package fr.thoridan.block;
 
 import fr.thoridan.menu.CustomItemStackHandler;
+import fr.thoridan.network.ModNetworking;
+import fr.thoridan.network.printer.MissingItemsPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderGetter;
@@ -9,6 +11,7 @@ import net.minecraft.nbt.*;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -26,6 +29,7 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 
@@ -48,16 +52,16 @@ public class PrinterBlockEntity extends BlockEntity {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
     }
 
-    public void placeStructureAt() {
-        if (storedTargetPos == null || storedRotation == null || storedSchematicName == null) {
-            System.out.println("No structure parameters stored.");
-            return;
-        }
-        placeStructureAt(storedTargetPos, storedRotation, storedSchematicName);
-    }
+//    public void placeStructureAt() {
+//        if (storedTargetPos == null || storedRotation == null || storedSchematicName == null) {
+//            System.out.println("No structure parameters stored.");
+//            return;
+//        }
+//        placeStructureAt(storedTargetPos, storedRotation, storedSchematicName);
+//    }
 
 
-    public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName) {
+    public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName, ServerPlayer player) {
         Level level = this.getLevel();
         if (level == null || level.isClientSide()) {
             return;
@@ -118,10 +122,6 @@ public class PrinterBlockEntity extends BlockEntity {
         ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
         for (int i = 0; i < blocksTag.size(); i++) {
             CompoundTag blockTag = blocksTag.getCompound(i);
-            ListTag posList = blockTag.getList("pos", Tag.TAG_INT);
-            int x = posList.getInt(0);
-            int y = posList.getInt(1);
-            int z = posList.getInt(2);
             int stateId = blockTag.getInt("state");
 
             BlockState blockState = palette.get(stateId);
@@ -134,9 +134,14 @@ public class PrinterBlockEntity extends BlockEntity {
             }
         }
 
-        // Check if the inventory has enough items
-        if (!hasRequiredItems(requiredItems)) {
+        // **Declare and calculate missingItems here**
+        Map<Item, Integer> missingItems = getMissingItems(requiredItems);
+        if (!missingItems.isEmpty()) {
             System.out.println("Not enough items to place the structure");
+
+            // Send packet to client to display missing items
+            sendMissingItemsToClient(missingItems, player);
+
             return;
         }
 
@@ -149,6 +154,12 @@ public class PrinterBlockEntity extends BlockEntity {
         if (!success) {
             System.out.println("Failed to place structure in world");
         }
+    }
+
+
+    private void sendMissingItemsToClient(Map<Item, Integer> missingItems, ServerPlayer player) {
+        // Create a packet and send it to the player
+        ModNetworking.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new MissingItemsPacket(missingItems));
     }
 
 
@@ -377,6 +388,32 @@ public class PrinterBlockEntity extends BlockEntity {
         return super.getCapability(capability, side);
     }
 
+
+    private Map<Item, Integer> getMissingItems(Map<Item, Integer> requiredItems) {
+        Map<Item, Integer> inventoryItems = new HashMap<>();
+
+        for (int i = 0; i < itemHandler.getSlots(); i++) {
+            ItemStack stack = itemHandler.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                Item item = stack.getItem();
+                inventoryItems.put(item, inventoryItems.getOrDefault(item, 0) + stack.getCount());
+            }
+        }
+
+        Map<Item, Integer> missingItems = new HashMap<>();
+
+        for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
+            Item item = entry.getKey();
+            int requiredCount = entry.getValue();
+            int availableCount = inventoryItems.getOrDefault(item, 0);
+
+            if (availableCount < requiredCount) {
+                missingItems.put(item, requiredCount - availableCount);
+            }
+        }
+
+        return missingItems;
+    }
 
 
 }
