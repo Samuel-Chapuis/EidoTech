@@ -77,7 +77,7 @@ public class PrinterBlock extends Block implements EntityBlock {
     public MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof PrinterBlockEntity) {
-            Component title = Component.literal("Custom Printer Title"); // Your new title
+            Component title = Component.literal("Printer"); // Your new title
             return new SimpleMenuProvider((windowId, playerInventory, player) ->
                     new PrinterMenu(windowId, playerInventory, blockEntity), title);
         }

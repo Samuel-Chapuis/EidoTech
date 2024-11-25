@@ -1,6 +1,7 @@
 package fr.thoridan.block;
 
 import fr.thoridan.menu.CustomItemStackHandler;
+import fr.thoridan.menu.PrinterMenu;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
 import net.minecraft.core.BlockPos;
@@ -9,9 +10,13 @@ import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -51,14 +56,6 @@ public class PrinterBlockEntity extends BlockEntity {
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
     }
-
-//    public void placeStructureAt() {
-//        if (storedTargetPos == null || storedRotation == null || storedSchematicName == null) {
-//            System.out.println("No structure parameters stored.");
-//            return;
-//        }
-//        placeStructureAt(storedTargetPos, storedRotation, storedSchematicName);
-//    }
 
 
     public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName, ServerPlayer player) {

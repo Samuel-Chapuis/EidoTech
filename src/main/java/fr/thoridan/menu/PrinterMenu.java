@@ -71,8 +71,11 @@ public class PrinterMenu extends AbstractContainerMenu {
 
     private void addPlayerInventorySlots(Inventory playerInventory) {
         int startX = 8;
-        int startY = 18 + (7 * 18) + 4; // Start position after the machine inventory
         int slotSizePlus2 = 18;
+
+        // Increase the space between machine inventory and player inventory
+        int additionalSpace = 34; // Adjust this value as needed
+        int startY = 18 + (7 * slotSizePlus2) + additionalSpace;
 
         // Player inventory slots (3 rows x 9 columns)
         for (int row = 0; row < 3; ++row) {
@@ -85,12 +88,13 @@ public class PrinterMenu extends AbstractContainerMenu {
         }
 
         // Hotbar slots
-        int hotbarY = startY + (3 * 18) + 4;
+        int hotbarY = startY + (3 * slotSizePlus2) + 4;
         for (int col = 0; col < 9; ++col) {
             int x = startX + col * slotSizePlus2;
             this.addSlot(new Slot(playerInventory, col, x, hotbarY));
         }
     }
+
 
     @Override
     public ItemStack quickMoveStack(Player playerIn, int index) {

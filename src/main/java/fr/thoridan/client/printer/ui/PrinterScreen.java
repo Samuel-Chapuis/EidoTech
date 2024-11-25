@@ -50,7 +50,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
         super(menu, inv, titleIn);
         this.imageWidth = 8 + (12 * 18) + 8; // Adjusted width for 12 columns
-        this.imageHeight = 18 + (7 * 18) + 4 + (3 * 18) + 4 + 18 + 4; // Adjusted height for 7 rows and player inventory
+        this.imageHeight = 18 + (7 * 18) + 4 + (3 * 18) + 4 + 18 + 4 + 28; // Adjusted height for 7 rows and player inventory
         this.schematics = new ArrayList<>();
         loadSchematics();
     }
@@ -249,8 +249,20 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Draw the title (e.g., "Printer")
         guiGraphics.drawString(this.font, this.title, 8, 6, 4210752, false);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, this.imageHeight - 94, 4210752, false);
+
+        // Calculate the Y position for the separator and the "Player Inventory" label
+        int separatorY = 18 + (7 * 18) + 4 + 6; // Adjusted for the added space
+        int labelY = separatorY + 8; // Position the label below the separator
+
+        // Draw the separator line
+        int lineStartX = 8;
+        int lineEndX = this.imageWidth - 8;
+        guiGraphics.hLine(lineStartX, lineEndX, separatorY, 0xFF404040); // Light gray line
+
+        // Draw the "Player Inventory" label
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, labelY, 4210752, false);
     }
 
 
@@ -293,24 +305,6 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         }
     }
 
-    public int getSchematicX() {
-        int x = Integer.parseInt(posXField.getValue());
-        System.out.println("X: " + x);
-        return x;
-    }
-
-    public int getSchematicY() {
-        int y = Integer.parseInt(posYField.getValue());
-        System.out.println("Y: " + y);
-        return y;
-    }
-
-    public int getSchematicZ() {
-        int z = Integer.parseInt(posZField.getValue());
-        System.out.println("Z: " + z);
-        return z;
-    }
-
 
     public void setMissingItems(Map<Item, Integer> missingItems) {
         this.missingItems = missingItems;
@@ -330,36 +324,66 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
 
     private void renderMissingItemsPopup(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int popupWidth = 150;
-        int popupHeight = 20 + missingItems.size() * 10;
+        // Minimum popup width
+        int minPopupWidth = 150;
+        int padding = 10; // Padding on each side
+
+        // Measure the width of the title
+        int titleWidth = this.font.width("Missing Items:");
+
+        // Measure the width of each missing item line and find the maximum
+        int maxTextWidth = titleWidth;
+        for (Map.Entry<Item, Integer> entry : missingItems.entrySet()) {
+            String itemName = entry.getKey().getDescription().getString();
+            int count = entry.getValue();
+            String text = count + " x " + itemName;
+            int textWidth = this.font.width(text);
+            if (textWidth > maxTextWidth) {
+                maxTextWidth = textWidth;
+            }
+        }
+
+        // Calculate the popup width based on the longest text line plus padding
+        int popupWidth = Math.max(minPopupWidth, maxTextWidth + padding * 2);
+
+        // Calculate the popup height based on the number of lines
+        int lineHeight = 10; // Height of each text line
+        int titleHeight = 15; // Height of the title
+        int popupHeight = titleHeight + (missingItems.size() * lineHeight) + padding * 2;
+
+        // Center the popup on the screen
         int popupX = (this.width - popupWidth) / 2;
         int popupY = (this.height - popupHeight) / 2;
 
         // Draw background
         guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + popupHeight, 0xAA000000);
 
-        // Draw border using hLine and vLine methods
+        // Draw border using fill method (1-pixel borders)
         // Top border
-        guiGraphics.hLine(popupX, popupX + popupWidth - 1, popupY, 0xFFFFFFFF);
+        guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + 1, 0xFFFFFFFF);
         // Bottom border
-        guiGraphics.hLine(popupX, popupX + popupWidth - 1, popupY + popupHeight - 1, 0xFFFFFFFF);
+        guiGraphics.fill(popupX, popupY + popupHeight - 1, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
         // Left border
-        guiGraphics.vLine(popupX, popupY, popupY + popupHeight - 1, 0xFFFFFFFF);
+        guiGraphics.fill(popupX, popupY, popupX + 1, popupY + popupHeight, 0xFFFFFFFF);
         // Right border
-        guiGraphics.vLine(popupX + popupWidth - 1, popupY, popupY + popupHeight - 1, 0xFFFFFFFF);
+        guiGraphics.fill(popupX + popupWidth - 1, popupY, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
 
         // Draw title
-        guiGraphics.drawString(this.font, "Missing Items:", popupX + 5, popupY + 5, 0xFFFFFF, false);
+        int textX = popupX + padding;
+        int textY = popupY + padding;
+        guiGraphics.drawString(this.font, "Missing Items:", textX, textY, 0xFFFFFF, false);
 
-        int y = popupY + 20;
+        // Draw each missing item
+        textY += titleHeight;
         for (Map.Entry<Item, Integer> entry : missingItems.entrySet()) {
             String itemName = entry.getKey().getDescription().getString();
             int count = entry.getValue();
             String text = count + " x " + itemName;
-            guiGraphics.drawString(this.font, text, popupX + 5, y, 0xFFFFFF, false);
-            y += 10;
+            guiGraphics.drawString(this.font, text, textX, textY, 0xFFFFFF, false);
+            textY += lineHeight;
         }
     }
+
 
 
 
