@@ -58,10 +58,10 @@ public class PrinterMenu extends AbstractContainerMenu {
         int startY = 18; // Top position of the inventory slots
         int slotSizePlus2 = 18;
 
-        // Printer inventory slots (27 slots)
-        for (int row = 0; row < 3; ++row) {
-            for (int col = 0; col < 9; ++col) {
-                int index = col + row * 9;
+        // Printer inventory slots (7 rows x 12 columns = 84 slots)
+        for (int row = 0; row < 7; ++row) {
+            for (int col = 0; col < 12; ++col) {
+                int index = col + row * 12;
                 int x = startX + col * slotSizePlus2;
                 int y = startY + row * slotSizePlus2;
                 this.addSlot(new CustomSlotItemHandler(handler, index, x, y));
@@ -71,10 +71,10 @@ public class PrinterMenu extends AbstractContainerMenu {
 
     private void addPlayerInventorySlots(Inventory playerInventory) {
         int startX = 8;
-        int startY = 86; // Adjust this value based on your GUI layout
+        int startY = 18 + (7 * 18) + 4; // Start position after the machine inventory
         int slotSizePlus2 = 18;
 
-        // Player inventory slots
+        // Player inventory slots (3 rows x 9 columns)
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
                 int index = col + row * 9 + 9;
@@ -85,7 +85,7 @@ public class PrinterMenu extends AbstractContainerMenu {
         }
 
         // Hotbar slots
-        int hotbarY = startY + 58; // Adjust this value based on your GUI layout
+        int hotbarY = startY + (3 * 18) + 4;
         for (int col = 0; col < 9; ++col) {
             int x = startX + col * slotSizePlus2;
             this.addSlot(new Slot(playerInventory, col, x, hotbarY));
@@ -101,12 +101,12 @@ public class PrinterMenu extends AbstractContainerMenu {
             ItemStack stackInSlot = slot.getItem();
             itemstack = stackInSlot.copy();
 
-            if (index < 27) { // From printer inventory to player inventory
-                if (!this.moveItemStackTo(stackInSlot, 27, this.slots.size(), true)) {
+            if (index < 84) { // From printer inventory to player inventory
+                if (!this.moveItemStackTo(stackInSlot, 84, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
             } else { // From player inventory to printer inventory
-                if (!this.moveItemStackTo(stackInSlot, 0, 27, false)) {
+                if (!this.moveItemStackTo(stackInSlot, 0, 84, false)) {
                     return ItemStack.EMPTY;
                 }
             }

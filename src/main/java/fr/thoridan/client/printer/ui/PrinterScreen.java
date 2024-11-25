@@ -45,8 +45,8 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
         super(menu, inv, titleIn);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
+        this.imageWidth = 8 + (12 * 18) + 8; // Adjusted width for 12 columns
+        this.imageHeight = 18 + (7 * 18) + 4 + (3 * 18) + 4 + 18 + 4; // Adjusted height for 7 rows and player inventory
         this.schematics = new ArrayList<>();
         loadSchematics();
     }

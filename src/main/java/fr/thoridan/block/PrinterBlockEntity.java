@@ -348,7 +348,7 @@ public class PrinterBlockEntity extends BlockEntity {
         return INFINITE_EXTENT_AABB;
     }
 
-    private final CustomItemStackHandler itemHandler = new CustomItemStackHandler(27) {
+    private final CustomItemStackHandler itemHandler = new CustomItemStackHandler(84) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();

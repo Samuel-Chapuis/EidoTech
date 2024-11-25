@@ -13,7 +13,7 @@ public class CustomItemStackHandler extends ItemStackHandler {
 
     @Override
     public int getSlotLimit(int slot) {
-        return 256;
+        return 127;
     }
 
 
