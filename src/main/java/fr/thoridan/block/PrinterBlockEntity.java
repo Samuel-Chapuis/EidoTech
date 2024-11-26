@@ -1,7 +1,6 @@
 package fr.thoridan.block;
 
 import fr.thoridan.menu.CustomItemStackHandler;
-import fr.thoridan.menu.PrinterMenu;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
 import net.minecraft.core.BlockPos;
@@ -10,13 +9,9 @@ import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
 import net.minecraft.network.Connection;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -26,8 +21,7 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.levelgen.structure.templatesystem.*;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -35,17 +29,15 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 
-import java.util.ArrayList;
+import java.util.*;
 
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class PrinterBlockEntity extends BlockEntity {
     private BlockPos storedTargetPos;
@@ -78,10 +70,15 @@ public class PrinterBlockEntity extends BlockEntity {
             return;
         }
 
+
+
         CompoundTag nbtData;
         try {
             // Read the NBT data from the file
             nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
+
+            ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
+
         } catch (IOException e) {
             System.out.println("Failed to read schematic file: " + e.getMessage());
             return;
@@ -102,6 +99,8 @@ public class PrinterBlockEntity extends BlockEntity {
                 .setMirror(Mirror.NONE)
                 .setIgnoreEntities(false)
                 .setFinalizeEntities(true);
+
+        settings.getProcessors().add(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
 
         // Map to store required blocks and counts
         Map<Item, Integer> requiredItems = new HashMap<>();
@@ -153,6 +152,11 @@ public class PrinterBlockEntity extends BlockEntity {
         }
     }
 
+    private List<StructureProcessor> getProcessors() {
+        List<StructureProcessor> processors = new ArrayList<>();
+        processors.add(BlockIgnoreProcessor.STRUCTURE_AND_AIR); // Add the processor
+        return processors;
+    }
 
     private void sendMissingItemsToClient(Map<Item, Integer> missingItems, ServerPlayer player) {
         // Create a packet and send it to the player
