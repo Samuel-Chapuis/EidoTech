@@ -9,6 +9,7 @@ import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,19 +41,28 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 public class PrinterBlockEntity extends BlockEntity {
+    private BlockPos pendingTargetPos;
+    private Rotation pendingRotation;
+    private String pendingSchematicName;
     private BlockPos storedTargetPos;
     private Rotation storedRotation;
     private String storedSchematicName;
+    private int placementDelayTicks = -1;
     
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
     }
 
-
     public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName, ServerPlayer player) {
         Level level = this.getLevel();
         if (level == null || level.isClientSide()) {
+            return;
+        }
+
+        if (placementDelayTicks > 0) {
+            // Inform the player that a placement is already in progress
+            player.displayClientMessage(Component.literal("A structure placement is already in progress."), true);
             return;
         }
 
@@ -70,15 +80,90 @@ public class PrinterBlockEntity extends BlockEntity {
             return;
         }
 
+        // Load NBT data to calculate required items
+        CompoundTag nbtData;
+        try {
+            nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
+        } catch (IOException e) {
+            System.out.println("Failed to read schematic file: " + e.getMessage());
+            return;
+        }
 
+        // Obtain the HolderGetter<Block> from the ServerLevel's RegistryAccess
+        HolderGetter<Block> holderGetter = serverLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
+
+        // Read the palette from NBT data
+        ListTag paletteTag = nbtData.getList("palette", Tag.TAG_COMPOUND);
+        List<BlockState> palette = new ArrayList<>();
+        for (int i = 0; i < paletteTag.size(); i++) {
+            CompoundTag stateTag = paletteTag.getCompound(i);
+            BlockState state = NbtUtils.readBlockState(holderGetter, stateTag);
+            palette.add(state);
+        }
+
+        // Read the blocks from NBT data and calculate required items
+        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
+        Map<Item, Integer> requiredItems = new HashMap<>();
+
+        for (int i = 0; i < blocksTag.size(); i++) {
+            CompoundTag blockTag = blocksTag.getCompound(i);
+            int stateId = blockTag.getInt("state");
+
+            BlockState blockState = palette.get(stateId);
+            // Apply rotation to the block state
+            blockState = blockState.rotate(rotation);
+
+            Item item = blockState.getBlock().asItem();
+            if (item != Items.AIR) {
+                requiredItems.put(item, requiredItems.getOrDefault(item, 0) + 1);
+            }
+        }
+
+        // Check for missing items
+        Map<Item, Integer> missingItems = getMissingItems(requiredItems);
+        if (!missingItems.isEmpty()) {
+            System.out.println("Not enough items to place the structure");
+
+            // Send packet to client to display missing items
+            sendMissingItemsToClient(missingItems, player);
+
+            return;
+        }
+
+        // Consume items from the inventory
+        consumeItems(requiredItems);
+
+        // Initiate the placement delay
+        this.pendingTargetPos = targetPos;
+        this.pendingRotation = rotation;
+        this.pendingSchematicName = schematicName;
+        this.placementDelayTicks = 200; // 10 seconds delay (200 ticks)
+        this.setChanged(); // Mark the block entity as changed
+    }
+
+    private void performStructurePlacement() {
+        Level level = this.getLevel();
+        if (level == null || level.isClientSide()) {
+            return;
+        }
+
+        if (!(level instanceof ServerLevel serverLevel)) {
+            System.out.println("Level is not a ServerLevel");
+            return;
+        }
+
+        // Load the schematic file
+        File schematicsFolder = new File(FMLPaths.GAMEDIR.get().toFile(), "schematics");
+        File schematicFile = new File(schematicsFolder, this.pendingSchematicName);
+
+        if (!schematicFile.exists()) {
+            System.out.println("Schematic file does not exist: " + schematicFile.getAbsolutePath());
+            return;
+        }
 
         CompoundTag nbtData;
         try {
-            // Read the NBT data from the file
             nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
-
-            ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
-
         } catch (IOException e) {
             System.out.println("Failed to read schematic file: " + e.getMessage());
             return;
@@ -95,67 +180,38 @@ public class PrinterBlockEntity extends BlockEntity {
 
         // Create StructurePlaceSettings
         StructurePlaceSettings settings = new StructurePlaceSettings()
-                .setRotation(rotation)
+                .setRotation(this.pendingRotation)
                 .setMirror(Mirror.NONE)
                 .setIgnoreEntities(false)
                 .setFinalizeEntities(true);
 
         settings.getProcessors().add(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
 
-        // Map to store required blocks and counts
-        Map<Item, Integer> requiredItems = new HashMap<>();
-
-        // Read the palette from NBT data
-        ListTag paletteTag = nbtData.getList("palette", Tag.TAG_COMPOUND);
-        List<BlockState> palette = new ArrayList<>();
-        for (int i = 0; i < paletteTag.size(); i++) {
-            CompoundTag stateTag = paletteTag.getCompound(i);
-            BlockState state = NbtUtils.readBlockState(holderGetter, stateTag);
-            palette.add(state);
-        }
-
-        // Read the blocks from NBT data
-        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
-        for (int i = 0; i < blocksTag.size(); i++) {
-            CompoundTag blockTag = blocksTag.getCompound(i);
-            int stateId = blockTag.getInt("state");
-
-            BlockState blockState = palette.get(stateId);
-            // Apply rotation to the block state
-            blockState = blockState.rotate(rotation);
-
-            Item item = blockState.getBlock().asItem();
-            if (item != Items.AIR) {
-                requiredItems.put(item, requiredItems.getOrDefault(item, 0) + 1);
-            }
-        }
-
-        // **Declare and calculate missingItems here**
-        Map<Item, Integer> missingItems = getMissingItems(requiredItems);
-        if (!missingItems.isEmpty()) {
-            System.out.println("Not enough items to place the structure");
-
-            // Send packet to client to display missing items
-            sendMissingItemsToClient(missingItems, player);
-
-            return;
-        }
-
-        // Consume items from the inventory
-        consumeItems(requiredItems);
-
         // Place the structure
-        boolean success = template.placeInWorld(serverLevel, targetPos, targetPos, settings, serverLevel.random, 2);
+        System.out.println("Placing structure in world");
+        boolean success = template.placeInWorld(serverLevel, this.pendingTargetPos, this.pendingTargetPos, settings, serverLevel.random, 2);
 
         if (!success) {
             System.out.println("Failed to place structure in world");
         }
+
+        // Reset the pending variables
+        this.pendingTargetPos = null;
+        this.pendingRotation = null;
+        this.pendingSchematicName = null;
+        this.placementDelayTicks = -1;
+        this.setChanged(); // Mark the block entity as changed
     }
 
-    private List<StructureProcessor> getProcessors() {
-        List<StructureProcessor> processors = new ArrayList<>();
-        processors.add(BlockIgnoreProcessor.STRUCTURE_AND_AIR); // Add the processor
-        return processors;
+
+    public static void tick(Level level, BlockPos pos, BlockState state, PrinterBlockEntity blockEntity) {
+        if (blockEntity.placementDelayTicks > 0) {
+            blockEntity.placementDelayTicks--;
+            if (blockEntity.placementDelayTicks == 0) {
+                blockEntity.performStructurePlacement();
+                blockEntity.setChanged(); // Mark the block entity as changed
+            }
+        }
     }
 
     private void sendMissingItemsToClient(Map<Item, Integer> missingItems, ServerPlayer player) {
@@ -163,30 +219,6 @@ public class PrinterBlockEntity extends BlockEntity {
         ModNetworking.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new MissingItemsPacket(missingItems));
     }
 
-
-
-    private boolean hasRequiredItems(Map<Item, Integer> requiredItems) {
-        Map<Item, Integer> inventoryItems = new HashMap<>();
-
-        for (int i = 0; i < itemHandler.getSlots(); i++) {
-            ItemStack stack = itemHandler.getStackInSlot(i);
-            if (!stack.isEmpty()) {
-                Item item = stack.getItem();
-                inventoryItems.put(item, inventoryItems.getOrDefault(item, 0) + stack.getCount());
-            }
-        }
-
-        for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
-            Item item = entry.getKey();
-            int requiredCount = entry.getValue();
-            int availableCount = inventoryItems.getOrDefault(item, 0);
-
-            if (availableCount < requiredCount) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     private void consumeItems(Map<Item, Integer> requiredItems) {
         for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
@@ -229,6 +261,20 @@ public class PrinterBlockEntity extends BlockEntity {
             tag.putString("SchematicName", storedSchematicName);
         }
 
+        // Save pending variables
+        if (pendingTargetPos != null) {
+            tag.putInt("PendingTargetX", pendingTargetPos.getX());
+            tag.putInt("PendingTargetY", pendingTargetPos.getY());
+            tag.putInt("PendingTargetZ", pendingTargetPos.getZ());
+        }
+        if (pendingRotation != null) {
+            tag.putString("PendingRotation", pendingRotation.name());
+        }
+        if (pendingSchematicName != null) {
+            tag.putString("PendingSchematicName", pendingSchematicName);
+        }
+        tag.putInt("PlacementDelayTicks", placementDelayTicks);
+
         // Console output
         System.out.println("Saving PrinterBlockEntity at " + getBlockPos());
         System.out.println("Stored Schematic Name: " + storedSchematicName);
@@ -257,6 +303,28 @@ public class PrinterBlockEntity extends BlockEntity {
             storedSchematicName = null;
         }
 
+        // Load pending variables
+        if (tag.contains("PendingTargetX") && tag.contains("PendingTargetY") && tag.contains("PendingTargetZ")) {
+            pendingTargetPos = new BlockPos(tag.getInt("PendingTargetX"), tag.getInt("PendingTargetY"), tag.getInt("PendingTargetZ"));
+        } else {
+            pendingTargetPos = null;
+        }
+        if (tag.contains("PendingRotation")) {
+            pendingRotation = Rotation.valueOf(tag.getString("PendingRotation"));
+        } else {
+            pendingRotation = null;
+        }
+        if (tag.contains("PendingSchematicName")) {
+            pendingSchematicName = tag.getString("PendingSchematicName");
+        } else {
+            pendingSchematicName = null;
+        }
+        if (tag.contains("PlacementDelayTicks")) {
+            placementDelayTicks = tag.getInt("PlacementDelayTicks");
+        } else {
+            placementDelayTicks = -1;
+        }
+
         // Console output
         System.out.println("Loading PrinterBlockEntity at " + getBlockPos());
         System.out.println("Loaded Schematic Name: " + storedSchematicName);
@@ -264,23 +332,6 @@ public class PrinterBlockEntity extends BlockEntity {
         System.out.println("Loaded Rotation: " + storedRotation);
     }
 
-
-    public void setStructureParameters(BlockPos targetPos, Rotation rotation, String schematicName) {
-        this.storedTargetPos = targetPos;
-        this.storedRotation = rotation;
-        this.storedSchematicName = schematicName;
-        setChanged(); // Mark the block entity as changed to save data
-        if (level != null && !level.isClientSide()) {
-            // Notify the client about the change
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-        }
-
-        // Console output
-        System.out.println("Set Structure Parameters in PrinterBlockEntity at " + getBlockPos());
-        System.out.println("Schematic Name: " + storedSchematicName);
-        System.out.println("Target Position: " + storedTargetPos);
-        System.out.println("Rotation: " + storedRotation);
-    }
 
     public void setRotation(Rotation rotation) {
         this.storedRotation = rotation;
@@ -378,6 +429,15 @@ public class PrinterBlockEntity extends BlockEntity {
     public void setRemoved() {
         super.setRemoved();
         lazyItemHandler.invalidate();
+
+        // Cancel any pending placement if the block is removed
+        if (placementDelayTicks > 0) {
+            placementDelayTicks = -1;
+            pendingTargetPos = null;
+            pendingRotation = null;
+            pendingSchematicName = null;
+            setChanged();
+        }
     }
 
 
