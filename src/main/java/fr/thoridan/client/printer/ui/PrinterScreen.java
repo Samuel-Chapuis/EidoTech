@@ -320,6 +320,13 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         if (!missingItems.isEmpty()) {
             renderMissingItemsPopup(guiGraphics, mouseX, mouseY);
         }
+
+        // Get the placementDelayTicks from blockEntity
+        int placementDelayTicks = menu.getBlockEntity().getClientPlacementDelayTicks();
+
+        if (placementDelayTicks > 0) {
+            renderPlacementDelayPopup(guiGraphics, placementDelayTicks);
+        }
     }
 
 
@@ -384,6 +391,48 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         }
     }
 
+
+    private void renderPlacementDelayPopup(GuiGraphics guiGraphics, int placementDelayTicks) {
+        // Convert ticks to seconds
+        int secondsRemaining = placementDelayTicks / 20;
+        float partialSeconds = (placementDelayTicks % 20) / 20.0f;
+        String timeText = String.format("Time remaining: %.1fs", secondsRemaining + partialSeconds);
+
+        // Prepare the popup dimensions
+        int popupWidth = 200;
+        int popupHeight = 50;
+        int padding = 10;
+
+        // Center the popup on the screen
+        int popupX = (this.width - popupWidth) / 2;
+        int popupY = (this.height - popupHeight) / 2;
+
+        // Draw background
+        guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + popupHeight, 0xAA000000);
+
+        // Draw border
+        // Top border
+        guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + 1, 0xFFFFFFFF);
+        // Bottom border
+        guiGraphics.fill(popupX, popupY + popupHeight - 1, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
+        // Left border
+        guiGraphics.fill(popupX, popupY, popupX + 1, popupY + popupHeight, 0xFFFFFFFF);
+        // Right border
+        guiGraphics.fill(popupX + popupWidth - 1, popupY, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
+
+        // Draw the title
+        String title = "Placing Structure...";
+        int titleWidth = this.font.width(title);
+        int titleX = popupX + (popupWidth - titleWidth) / 2;
+        int titleY = popupY + padding;
+        guiGraphics.drawString(this.font, title, titleX, titleY, 0xFFFFFF, false);
+
+        // Draw the remaining time
+        int timeWidth = this.font.width(timeText);
+        int timeX = popupX + (popupWidth - timeWidth) / 2;
+        int timeY = titleY + 20; // Adjust as needed
+        guiGraphics.drawString(this.font, timeText, timeX, timeY, 0xFFFFFF, false);
+    }
 
 
 

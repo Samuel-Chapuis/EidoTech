@@ -3,6 +3,7 @@ package fr.thoridan.block;
 import fr.thoridan.menu.CustomItemStackHandler;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
+import fr.thoridan.network.printer.PlacementDelayUpdatePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderGetter;
@@ -48,7 +49,8 @@ public class PrinterBlockEntity extends BlockEntity {
     private Rotation storedRotation;
     private String storedSchematicName;
     private int placementDelayTicks = -1;
-    
+    private int clientPlacementDelayTicks = -1;
+
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
@@ -210,6 +212,11 @@ public class PrinterBlockEntity extends BlockEntity {
             if (blockEntity.placementDelayTicks == 0) {
                 blockEntity.performStructurePlacement();
                 blockEntity.setChanged(); // Mark the block entity as changed
+            }
+            // Send update to client
+            if (level instanceof ServerLevel serverLevel) {
+                ModNetworking.INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(() -> serverLevel.getChunkAt(pos)),
+                        new PlacementDelayUpdatePacket(pos, blockEntity.placementDelayTicks));
             }
         }
     }
@@ -474,6 +481,17 @@ public class PrinterBlockEntity extends BlockEntity {
         }
 
         return missingItems;
+    }
+
+
+    // Getter and Setter for clientPlacementDelayTicks
+    public void setClientPlacementDelayTicks(int ticks) {
+        this.clientPlacementDelayTicks = ticks;
+    }
+
+
+    public int getClientPlacementDelayTicks() {
+        return clientPlacementDelayTicks;
     }
 
 

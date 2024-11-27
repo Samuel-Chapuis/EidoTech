@@ -22,6 +22,7 @@ public class ModNetworking {
         INSTANCE.registerMessage(id++, RotationChangePacket.class, RotationChangePacket::toBytes, RotationChangePacket::new, RotationChangePacket::handle);
         INSTANCE.registerMessage(id++, PositionUpdatePacket.class, PositionUpdatePacket::toBytes, PositionUpdatePacket::new, PositionUpdatePacket::handle);
         INSTANCE.registerMessage(id++, MissingItemsPacket.class, MissingItemsPacket::toBytes, MissingItemsPacket::new, MissingItemsPacket::handle);
+        INSTANCE.registerMessage(id++, PlacementDelayUpdatePacket.class, PlacementDelayUpdatePacket::toBytes, PlacementDelayUpdatePacket::new, PlacementDelayUpdatePacket::handle);
         // Register other packets here
     }
 }
