@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
@@ -27,10 +28,16 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
 import java.util.List;
 import java.lang.reflect.Field;
-
 public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBlockEntity> {
+
+    private long lastMessageTime = 0;
+    private static final long MESSAGE_COOLDOWN_MS = 0;
+    private static final boolean DEBUG = true;
 
     public PrinterBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
         // Constructor can be empty or store context if needed
@@ -94,10 +101,13 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
     }
 
     private void renderStructure(StructureTemplate template, BlockPos blockEntityPos, BlockPos targetPos, Rotation rotation, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
+        sendDebugMessage("Hello from PrinterBlockEntityRenderer -> renderStructure");
+
         Level clientLevel = Minecraft.getInstance().level;
         if (clientLevel == null) {
             return;
         }
+        sendDebugMessage("Client level is not null");
 
         poseStack.pushPose();
 
@@ -123,9 +133,11 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             @SuppressWarnings("unchecked")
             List<StructureTemplate.Palette> palettes = (List<StructureTemplate.Palette>) palettesField.get(template);
             blockInfos = palettes.get(0).blocks();
+            sendDebugMessage("BlockInfos size: " + blockInfos.size());
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
             poseStack.popPose();
+            sendDebugMessage("Failed to access 'palettes' field in StructureTemplate");
             return;
         }
 
@@ -172,6 +184,10 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
 
         // Set the desired alpha value (0.0F = fully transparent, 1.0F = fully opaque)
         float alpha = 0.5F; // Adjust this value as needed
+        if(DEBUG){
+            alpha = 1.0F;
+        }
+
 
         // Use the translucent render type
         RenderType renderType = RenderType.translucent();
@@ -194,10 +210,6 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
         );
     }
 
-
-
-
-
     @Override
     public boolean shouldRenderOffScreen(PrinterBlockEntity blockEntity) {
         return true;
@@ -206,5 +218,20 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
     @Override
     public int getViewDistance() {
         return 128;
+    }
+
+    private void sendDebugMessage(String message) {
+        if (!DEBUG) return;
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastMessageTime < MESSAGE_COOLDOWN_MS) {
+            return; // Skip sending the message to avoid spamming
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null) {
+            minecraft.player.sendSystemMessage(Component.literal(message));
+            lastMessageTime = currentTime;
+        }
     }
 }
