@@ -2,7 +2,7 @@ package fr.thoridan.client.printer.render;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import fr.thoridan.block.PrinterBlockEntity;
-
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -10,33 +10,34 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Minecraft;
-import net.minecraft.world.level.Level;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraftforge.registries.ForgeRegistries;
+
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.core.HolderGetter;
-import net.minecraft.core.registries.Registries;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import java.util.*;
 
-import java.util.List;
-import java.lang.reflect.Field;
 public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBlockEntity> {
 
     private long lastMessageTime = 0;
-    private static final long MESSAGE_COOLDOWN_MS = 0;
+    private static final long MESSAGE_COOLDOWN_MS = 1000; // Adjust as needed
     private static final boolean DEBUG = true;
 
     public PrinterBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
@@ -54,9 +55,9 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             return;
         }
 
-        // Load the schematic
-        StructureTemplate template = loadStructure(blockEntity.getStoredSchematicName());
-        if (template == null) {
+        // Load the schematic blocks
+        List<StructureTemplate.StructureBlockInfo> blockInfos = loadStructureBlocks(blockEntity.getStoredSchematicName());
+        if (blockInfos == null || blockInfos.isEmpty()) {
             return;
         }
 
@@ -65,42 +66,149 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
         Rotation rotation = blockEntity.getStoredRotation() != null ? blockEntity.getStoredRotation() : Rotation.NONE;
 
         // Render the structure
-        renderStructure(template, blockEntity.getBlockPos(), targetPos, rotation, poseStack, bufferSource, combinedLight);
+        renderStructure(blockInfos, blockEntity.getBlockPos(), targetPos, rotation, poseStack, bufferSource, combinedLight);
     }
 
-
-    private StructureTemplate loadStructure(String schematicName) {
+    /**
+     * Loads the schematic file and extracts the list of StructureBlockInfo.
+     *
+     * @param schematicName The name of the schematic file.
+     * @return A list of StructureBlockInfo or null if loading fails.
+     */
+    @Nullable
+    private List<StructureTemplate.StructureBlockInfo> loadStructureBlocks(String schematicName) {
         // Get the schematics folder in the game directory
         File schematicsFolder = new File(Minecraft.getInstance().gameDirectory, "schematics");
         File schematicFile = new File(schematicsFolder, schematicName);
 
         if (!schematicFile.exists()) {
-            System.out.println("Schematic file does not exist: " + schematicFile.getAbsolutePath());
+            sendDebugMessage("Schematic file does not exist: " + schematicFile.getAbsolutePath());
             return null;
         }
 
         CompoundTag nbtData;
-        try {
+        try (FileInputStream fis = new FileInputStream(schematicFile)) {
             // Read the NBT data from the file
-            nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
+            nbtData = NbtIo.readCompressed(fis);
         } catch (IOException e) {
-            System.out.println("Failed to read schematic file: " + e.getMessage());
+            sendDebugMessage("Failed to read schematic file: " + e.getMessage());
             return null;
         }
 
-        // Create a new StructureTemplate and load the NBT data
-        StructureTemplate template = new StructureTemplate();
+        // Extract the palette
+        ListTag paletteList = nbtData.getList("palette", 10); // 10 for CompoundTag
+        List<BlockState> palette = new ArrayList<>();
+        for (int i = 0; i < paletteList.size(); i++) {
+            CompoundTag blockStateTag = paletteList.getCompound(i);
+            String blockName = blockStateTag.getString("Name");
+            Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockName));
+            if (block == null) {
+                sendDebugMessage("Unknown block: " + blockName + ". Defaulting to AIR.");
+                block = Blocks.AIR;
+            }
+            BlockState state = block.defaultBlockState();
 
-        // Obtain the HolderGetter<Block> from the Level's RegistryAccess
-        HolderGetter<Block> holderGetter = Minecraft.getInstance().level.registryAccess().lookupOrThrow(Registries.BLOCK);
+            // Handle block properties if any
+            if (blockStateTag.contains("Properties", 10)) { // 10 for CompoundTag
+                CompoundTag properties = blockStateTag.getCompound("Properties");
+                for (String key : properties.getAllKeys()) {
+                    String value = properties.getString(key);
+                    Property<?> property = getProperty(state, key);
+                    if (property != null) {
+                        // Use the helper method to set the property
+                        state = setBlockStateProperty(state, property, value, blockName);
+                    } else {
+                        sendDebugMessage("Property '" + key + "' not found for block '" + blockName + "'.");
+                    }
+                }
+            }
 
-        // Load the structure with the HolderGetter
-        template.load(holderGetter, nbtData);
+            palette.add(state);
+        }
 
-        return template;
+        // Extract the blocks
+        ListTag blocksList = nbtData.getList("blocks", 10); // 10 for CompoundTag
+        List<StructureTemplate.StructureBlockInfo> blockInfos = new ArrayList<>();
+
+        for (int i = 0; i < blocksList.size(); i++) {
+            CompoundTag blockTag = blocksList.getCompound(i);
+
+            // Extract position
+            CompoundTag posTag = blockTag.getCompound("pos");
+            int x = posTag.getInt("x");
+            int y = posTag.getInt("y");
+            int z = posTag.getInt("z");
+            BlockPos pos = new BlockPos(x, y, z);
+
+            // Extract state index
+            int stateIndex = blockTag.getInt("state"); // "state" is an integer index into the palette
+            if (stateIndex < 0 || stateIndex >= palette.size()) {
+                sendDebugMessage("Invalid state index: " + stateIndex + " at block " + pos);
+                continue;
+            }
+            BlockState state = palette.get(stateIndex);
+
+            // Extract NBT if present
+            @Nullable CompoundTag nbt = blockTag.contains("nbt", 10) ? blockTag.getCompound("nbt") : null;
+
+            StructureTemplate.StructureBlockInfo blockInfo = new StructureTemplate.StructureBlockInfo(pos, state, nbt);
+            blockInfos.add(blockInfo);
+        }
+
+        sendDebugMessage("Loaded " + blockInfos.size() + " blocks from schematic '" + schematicName + "'.");
+        return blockInfos;
     }
 
-    private void renderStructure(StructureTemplate template, BlockPos blockEntityPos, BlockPos targetPos, Rotation rotation, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
+    /**
+     * Retrieves the Property object for a given BlockState and property name.
+     *
+     * @param state The BlockState.
+     * @param name  The property name.
+     * @return The Property object or null if not found.
+     */
+    @Nullable
+    private <T extends Comparable<T>> Property<T> getProperty(BlockState state, String name) {
+        for (Property<?> prop : state.getProperties()) {
+            if (prop.getName().equals(name)) {
+                @SuppressWarnings("unchecked")
+                Property<T> typedProp = (Property<T>) prop;
+                return typedProp;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sets a Property value on a BlockState.
+     *
+     * @param state      The original BlockState.
+     * @param property   The Property to set.
+     * @param value      The string value to parse and set.
+     * @param blockName  The name of the block (for debugging purposes).
+     * @return The updated BlockState.
+     */
+    private <T extends Comparable<T>> BlockState setBlockStateProperty(BlockState state, Property<T> property, String value, String blockName) {
+        Optional<T> parsedValue = property.getValue(value);
+        if (parsedValue.isPresent()) {
+            return state.setValue(property, parsedValue.get());
+        } else {
+            sendDebugMessage("Invalid value '" + value + "' for property '" + property.getName() + "' on block '" + blockName + "'.");
+            return state;
+        }
+    }
+
+    /**
+     * Renders the structure based on the provided block information.
+     *
+     * @param blockInfos     List of StructureBlockInfo to render.
+     * @param blockEntityPos Position of the block entity.
+     * @param targetPos      Target position where the structure should be rendered.
+     * @param rotation       Rotation to apply to the structure.
+     * @param poseStack      The PoseStack for rendering transformations.
+     * @param bufferSource   The buffer source for rendering.
+     * @param combinedLight  Light level for rendering.
+     */
+    private void renderStructure(List<StructureTemplate.StructureBlockInfo> blockInfos, BlockPos blockEntityPos, BlockPos targetPos, Rotation rotation, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
         sendDebugMessage("Hello from PrinterBlockEntityRenderer -> renderStructure");
 
         Level clientLevel = Minecraft.getInstance().level;
@@ -125,21 +233,7 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
                 .setIgnoreEntities(false)
                 .setFinalizeEntities(true);
 
-        // Use reflection to access the private 'palettes' field
-        List<StructureTemplate.StructureBlockInfo> blockInfos;
-        try {
-            Field palettesField = StructureTemplate.class.getDeclaredField("palettes");
-            palettesField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            List<StructureTemplate.Palette> palettes = (List<StructureTemplate.Palette>) palettesField.get(template);
-            blockInfos = palettes.get(0).blocks();
-            sendDebugMessage("BlockInfos size: " + blockInfos.size());
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            e.printStackTrace();
-            poseStack.popPose();
-            sendDebugMessage("Failed to access 'palettes' field in StructureTemplate");
-            return;
-        }
+        sendDebugMessage("BlockInfos size: " + blockInfos.size());
 
         // Render each block in the structure
         for (StructureTemplate.StructureBlockInfo blockInfo : blockInfos) {
@@ -177,31 +271,34 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
         }
     }
 
-
+    /**
+     * Renders a single block with optional transparency.
+     *
+     * @param state          The BlockState to render.
+     * @param poseStack      The PoseStack for rendering transformations.
+     * @param bufferSource   The buffer source for rendering.
+     * @param combinedLight  Light level for rendering.
+     */
     private void renderTransparentBlock(BlockState state, PoseStack poseStack, MultiBufferSource bufferSource, int combinedLight) {
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
         BakedModel model = blockRenderer.getBlockModel(state);
 
         // Set the desired alpha value (0.0F = fully transparent, 1.0F = fully opaque)
-        float alpha = 0.5F; // Adjust this value as needed
-        if(DEBUG){
-            alpha = 1.0F;
-        }
+        float alpha = DEBUG ? 1.0F : 0.5F; // Adjust this value as needed
 
-
-        // Use the translucent render type
-        RenderType renderType = RenderType.translucent();
+        // Choose the appropriate RenderType based on alpha
+        RenderType renderType = alpha < 1.0F ? RenderType.translucent() : RenderType.solid();
 
         // Get the original VertexConsumer
         VertexConsumer originalConsumer = bufferSource.getBuffer(renderType);
 
-        // Wrap it with our AlphaAdjustingVertexConsumer
-        VertexConsumer alphaConsumer = new AlphaAdjustingVertexConsumer(originalConsumer, alpha);
+        // Wrap it with our AlphaAdjustingVertexConsumer if transparency is needed
+        VertexConsumer consumer = alpha < 1.0F ? new AlphaAdjustingVertexConsumer(originalConsumer, alpha) : originalConsumer;
 
-        // Render the block using the alpha-adjusted VertexConsumer
+        // Render the block using the adjusted VertexConsumer
         blockRenderer.getModelRenderer().renderModel(
                 poseStack.last(),
-                alphaConsumer,
+                consumer,
                 state,
                 model,
                 1.0F, 1.0F, 1.0F, // RGB colors
@@ -220,6 +317,11 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
         return 128;
     }
 
+    /**
+     * Sends a debug message to the player if debugging is enabled.
+     *
+     * @param message The message to send.
+     */
     private void sendDebugMessage(String message) {
         if (!DEBUG) return;
 
