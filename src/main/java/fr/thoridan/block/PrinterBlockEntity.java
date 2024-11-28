@@ -139,7 +139,7 @@ public class PrinterBlockEntity extends BlockEntity {
         this.pendingTargetPos = targetPos;
         this.pendingRotation = rotation;
         this.pendingSchematicName = schematicName;
-        this.placementDelayTicks = 200; // 10 seconds delay (200 ticks)
+        this.placementDelayTicks = blocksTag.size()*1; // 1 tick per block
         this.setChanged(); // Mark the block entity as changed
     }
 
