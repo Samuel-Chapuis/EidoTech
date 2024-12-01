@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -38,7 +39,7 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
 
     private long lastMessageTime = 0;
     private static final long MESSAGE_COOLDOWN_MS = 1000; // Adjust as needed
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     public PrinterBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
         // Constructor can be empty or store context if needed
@@ -134,10 +135,10 @@ public class PrinterBlockEntityRenderer implements BlockEntityRenderer<PrinterBl
             CompoundTag blockTag = blocksList.getCompound(i);
 
             // Extract position
-            CompoundTag posTag = blockTag.getCompound("pos");
-            int x = posTag.getInt("x");
-            int y = posTag.getInt("y");
-            int z = posTag.getInt("z");
+            ListTag posList = blockTag.getList("pos", Tag.TAG_INT);
+            int x = posList.getInt(0);
+            int y = posList.getInt(1);
+            int z = posList.getInt(2);
             BlockPos pos = new BlockPos(x, y, z);
 
             // Extract state index
