@@ -50,10 +50,20 @@ public class PrinterBlockEntity extends BlockEntity {
     private String storedSchematicName;
     private int placementDelayTicks = -1;
     private int clientPlacementDelayTicks = -1;
-
+    private UUID ownerUUID;
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
+    }
+
+    public UUID getOwnerUUID() {
+        return ownerUUID;
+    }
+
+    public void setOwnerUUID(UUID ownerUUID) {
+        this.ownerUUID = ownerUUID;
+        System.out.println("Player UUID set to " + ownerUUID);
+        setChanged();
     }
 
     public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName, ServerPlayer player) {
@@ -282,6 +292,10 @@ public class PrinterBlockEntity extends BlockEntity {
         }
         tag.putInt("PlacementDelayTicks", placementDelayTicks);
 
+        if (ownerUUID != null) {
+            tag.putUUID("OwnerUUID", ownerUUID);
+        }
+
         // Console output
         System.out.println("Saving PrinterBlockEntity at " + getBlockPos());
         System.out.println("Stored Schematic Name: " + storedSchematicName);
@@ -330,6 +344,10 @@ public class PrinterBlockEntity extends BlockEntity {
             placementDelayTicks = tag.getInt("PlacementDelayTicks");
         } else {
             placementDelayTicks = -1;
+        }
+
+        if (tag.hasUUID("OwnerUUID")) {
+            ownerUUID = tag.getUUID("OwnerUUID");
         }
 
         // Console output
