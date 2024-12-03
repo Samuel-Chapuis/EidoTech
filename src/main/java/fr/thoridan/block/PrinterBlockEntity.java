@@ -1,5 +1,6 @@
 package fr.thoridan.block;
 
+import com.mojang.authlib.GameProfile;
 import fr.thoridan.menu.CustomItemStackHandler;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
@@ -14,19 +15,28 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.*;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.items.IItemHandler;
@@ -65,6 +75,8 @@ public class PrinterBlockEntity extends BlockEntity {
         System.out.println("Player UUID set to " + ownerUUID);
         setChanged();
     }
+
+
 
     public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName, ServerPlayer player) {
         Level level = this.getLevel();
@@ -153,16 +165,16 @@ public class PrinterBlockEntity extends BlockEntity {
         this.setChanged(); // Mark the block entity as changed
     }
 
+
+
     private void performStructurePlacement() {
         Level level = this.getLevel();
-        if (level == null || level.isClientSide()) {
-            return;
-        }
-
         if (!(level instanceof ServerLevel serverLevel)) {
             System.out.println("Level is not a ServerLevel");
             return;
         }
+
+        System.out.println("Starting performStructurePlacement");
 
         // Load the schematic file
         File schematicsFolder = new File(FMLPaths.GAMEDIR.get().toFile(), "schematics");
@@ -173,9 +185,16 @@ public class PrinterBlockEntity extends BlockEntity {
             return;
         }
 
+        // Create the FakePlayer
+        GameProfile ownerProfile = new GameProfile(ownerUUID, "[Printer Owner]");
+        FakePlayer fakePlayer = FakePlayerFactory.get(serverLevel, ownerProfile);
+        fakePlayer.setGameMode(GameType.SURVIVAL);
+        System.out.println("FakePlayer UUID: " + fakePlayer.getUUID());
+
         CompoundTag nbtData;
         try {
             nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
+            System.out.println("Schematic NBT data loaded successfully.");
         } catch (IOException e) {
             System.out.println("Failed to read schematic file: " + e.getMessage());
             return;
@@ -189,31 +208,79 @@ public class PrinterBlockEntity extends BlockEntity {
 
         // Load the structure with the HolderGetter
         template.load(holderGetter, nbtData);
+        System.out.println("StructureTemplate loaded with size: " + template.getSize());
 
         // Create StructurePlaceSettings
         StructurePlaceSettings settings = new StructurePlaceSettings()
                 .setRotation(this.pendingRotation)
                 .setMirror(Mirror.NONE)
                 .setIgnoreEntities(false)
-                .setFinalizeEntities(true);
+                .setFinalizeEntities(true)
+                .addProcessor(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
 
-        settings.getProcessors().add(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
+        // Set the FakePlayer's position relative to the target position
+        fakePlayer.setPos(pendingTargetPos.getX() + 0.5, pendingTargetPos.getY() + 1.5, pendingTargetPos.getZ() + 0.5);
+        System.out.println("FakePlayer Position set to: " + fakePlayer.getPosition(1.0F));
 
-        // Place the structure
-        System.out.println("Placing structure in world");
-        boolean success = template.placeInWorld(serverLevel, this.pendingTargetPos, this.pendingTargetPos, settings, serverLevel.random, 2);
+        // Place the structure using placeInWorld, passing the FakePlayer
+        boolean success = template.placeInWorld(serverLevel, pendingTargetPos, pendingTargetPos, settings, serverLevel.random, 2);
+        System.out.println("Structure placement via placeInWorld was " + (success ? "successful" : "unsuccessful"));
 
         if (!success) {
-            System.out.println("Failed to place structure in world");
+            System.out.println("Failed to place the structure using placeInWorld.");
         }
 
-        // Reset the pending variables
+        // Reset pending variables
         this.pendingTargetPos = null;
         this.pendingRotation = null;
         this.pendingSchematicName = null;
         this.placementDelayTicks = -1;
-        this.setChanged(); // Mark the block entity as changed
+        this.setChanged();
+        System.out.println("Finished performStructurePlacement");
     }
+
+
+
+
+
+
+    private void simulateBlockPlacement(FakePlayer fakePlayer, ServerLevel level, BlockState blockState, BlockPos pos, @Nullable CompoundTag nbt) {
+        System.out.println("Simulating block placement at position: " + pos);
+
+        // Prepare the item stack for the block
+        ItemStack stack = new ItemStack(blockState.getBlock().asItem());
+        stack.setCount(1);
+        fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        System.out.println("ItemStack: " + stack);
+        System.out.println("BlockState: " + blockState);
+
+        // Set the FakePlayer's position near the block to be placed
+        fakePlayer.setPos(pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5);
+
+        // Create a BlockHitResult for block placement
+        BlockHitResult hitResult = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+
+        // Simulate the block placement
+        InteractionResult result = fakePlayer.gameMode.useItemOn(fakePlayer, level, stack, InteractionHand.MAIN_HAND, hitResult);
+        System.out.println("InteractionResult: " + result);
+
+        if (!result.consumesAction()) {
+            // If placement failed, place the block directly (optional)
+            System.out.println("useItemOn failed, placing block directly.");
+            boolean setBlockResult = level.setBlock(pos, blockState, 3);
+            System.out.println("setBlock result: " + setBlockResult);
+        }
+
+        // Handle block entity data if present
+        if (nbt != null) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity != null) {
+                blockEntity.load(nbt);
+            }
+        }
+    }
+
+
 
 
     public static void tick(Level level, BlockPos pos, BlockState state, PrinterBlockEntity blockEntity) {
