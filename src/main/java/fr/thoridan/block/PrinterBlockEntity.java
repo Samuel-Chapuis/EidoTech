@@ -166,7 +166,6 @@ public class PrinterBlockEntity extends BlockEntity {
     }
 
 
-
     private void performStructurePlacement() {
         Level level = this.getLevel();
         if (!(level instanceof ServerLevel serverLevel)) {
@@ -200,34 +199,50 @@ public class PrinterBlockEntity extends BlockEntity {
             return;
         }
 
-        // Create a new StructureTemplate and load the NBT data
-        StructureTemplate template = new StructureTemplate();
-
         // Obtain the HolderGetter<Block> from the ServerLevel's RegistryAccess
         HolderGetter<Block> holderGetter = serverLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
 
-        // Load the structure with the HolderGetter
-        template.load(holderGetter, nbtData);
-        System.out.println("StructureTemplate loaded with size: " + template.getSize());
+        // Read the palette from NBT data
+        ListTag paletteTag = nbtData.getList("palette", Tag.TAG_COMPOUND);
+        List<BlockState> palette = new ArrayList<>();
+        for (int i = 0; i < paletteTag.size(); i++) {
+            CompoundTag stateTag = paletteTag.getCompound(i);
+            BlockState state = NbtUtils.readBlockState(holderGetter, stateTag);
+            palette.add(state);
+        }
 
-        // Create StructurePlaceSettings
-        StructurePlaceSettings settings = new StructurePlaceSettings()
-                .setRotation(this.pendingRotation)
-                .setMirror(Mirror.NONE)
-                .setIgnoreEntities(false)
-                .setFinalizeEntities(true)
-                .addProcessor(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
+        // Read the blocks from NBT data
+        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
+        System.out.println("Total blocks to place: " + blocksTag.size());
 
-        // Set the FakePlayer's position relative to the target position
-        fakePlayer.setPos(pendingTargetPos.getX() + 0.5, pendingTargetPos.getY() + 1.5, pendingTargetPos.getZ() + 0.5);
-        System.out.println("FakePlayer Position set to: " + fakePlayer.getPosition(1.0F));
+        // Iterate over each block and simulate placement
+        for (int i = 0; i < blocksTag.size(); i++) {
+            CompoundTag blockTag = blocksTag.getCompound(i);
 
-        // Place the structure using placeInWorld, passing the FakePlayer
-        boolean success = template.placeInWorld(serverLevel, pendingTargetPos, pendingTargetPos, settings, serverLevel.random, 2);
-        System.out.println("Structure placement via placeInWorld was " + (success ? "successful" : "unsuccessful"));
+            // Get the position
+            ListTag posList = blockTag.getList("pos", Tag.TAG_INT);
+            int x = posList.getInt(0);
+            int y = posList.getInt(1);
+            int z = posList.getInt(2);
+            BlockPos blockPos = new BlockPos(x, y, z);
 
-        if (!success) {
-            System.out.println("Failed to place the structure using placeInWorld.");
+            // Get the state index and retrieve the BlockState
+            int stateId = blockTag.getInt("state");
+            BlockState blockState = palette.get(stateId);
+
+            // Apply rotation and mirror transformations
+            blockState = blockState.mirror(Mirror.NONE).rotate(this.pendingRotation);
+            blockPos = transformBlockPos(blockPos, this.pendingRotation);
+
+            // Offset the block position by the target position
+            BlockPos worldPos = blockPos.offset(this.pendingTargetPos);
+
+            // Get NBT data if present
+            CompoundTag nbt = blockTag.contains("nbt") ? blockTag.getCompound("nbt") : null;
+
+            System.out.println("Attempting to place block: " + blockState + " at position: " + worldPos);
+
+            simulateBlockPlacement(fakePlayer, serverLevel, blockState, worldPos, nbt);
         }
 
         // Reset pending variables
@@ -241,6 +256,23 @@ public class PrinterBlockEntity extends BlockEntity {
 
 
 
+    private BlockPos transformBlockPos(BlockPos pos, Rotation rotation) {
+        // Transform the block position according to the rotation
+        // The center of rotation is the origin (0,0,0) of the structure
+        switch (rotation) {
+            case NONE:
+                return pos;
+            case CLOCKWISE_90:
+                return new BlockPos(-pos.getZ(), pos.getY(), pos.getX());
+            case CLOCKWISE_180:
+                return new BlockPos(-pos.getX(), pos.getY(), -pos.getZ());
+            case COUNTERCLOCKWISE_90:
+                return new BlockPos(pos.getZ(), pos.getY(), -pos.getX());
+            default:
+                return pos;
+        }
+    }
+
 
 
 
@@ -249,10 +281,14 @@ public class PrinterBlockEntity extends BlockEntity {
 
         // Prepare the item stack for the block
         ItemStack stack = new ItemStack(blockState.getBlock().asItem());
+        if (stack.isEmpty()) {
+            System.out.println("ItemStack is empty for block: " + blockState.getBlock());
+            return;
+        }
+
         stack.setCount(1);
         fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, stack);
-        System.out.println("ItemStack: " + stack);
-        System.out.println("BlockState: " + blockState);
+        System.out.println("ItemStack in FakePlayer's hand: " + stack);
 
         // Set the FakePlayer's position near the block to be placed
         fakePlayer.setPos(pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5);
@@ -265,10 +301,10 @@ public class PrinterBlockEntity extends BlockEntity {
         System.out.println("InteractionResult: " + result);
 
         if (!result.consumesAction()) {
-            // If placement failed, place the block directly (optional)
-            System.out.println("useItemOn failed, placing block directly.");
-            boolean setBlockResult = level.setBlock(pos, blockState, 3);
-            System.out.println("setBlock result: " + setBlockResult);
+            // If placement failed, output debug message
+            System.out.println("Block placement was denied or failed for block at position: " + pos);
+        } else {
+            System.out.println("Block placed successfully at position: " + pos);
         }
 
         // Handle block entity data if present
@@ -276,9 +312,11 @@ public class PrinterBlockEntity extends BlockEntity {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity != null) {
                 blockEntity.load(nbt);
+                System.out.println("BlockEntity data loaded for block at position: " + pos);
             }
         }
     }
+
 
 
 
@@ -364,10 +402,10 @@ public class PrinterBlockEntity extends BlockEntity {
         }
 
         // Console output
-        System.out.println("Saving PrinterBlockEntity at " + getBlockPos());
-        System.out.println("Stored Schematic Name: " + storedSchematicName);
-        System.out.println("Stored Target Position: " + storedTargetPos);
-        System.out.println("Stored Rotation: " + storedRotation);
+//        System.out.println("Saving PrinterBlockEntity at " + getBlockPos());
+//        System.out.println("Stored Schematic Name: " + storedSchematicName);
+//        System.out.println("Stored Target Position: " + storedTargetPos);
+//        System.out.println("Stored Rotation: " + storedRotation);
     }
 
 
@@ -418,10 +456,10 @@ public class PrinterBlockEntity extends BlockEntity {
         }
 
         // Console output
-        System.out.println("Loading PrinterBlockEntity at " + getBlockPos());
-        System.out.println("Loaded Schematic Name: " + storedSchematicName);
-        System.out.println("Loaded Target Position: " + storedTargetPos);
-        System.out.println("Loaded Rotation: " + storedRotation);
+//        System.out.println("Loading PrinterBlockEntity at " + getBlockPos());
+//        System.out.println("Loaded Schematic Name: " + storedSchematicName);
+//        System.out.println("Loaded Target Position: " + storedTargetPos);
+//        System.out.println("Loaded Rotation: " + storedRotation);
     }
 
 
@@ -481,8 +519,8 @@ public class PrinterBlockEntity extends BlockEntity {
         }
 
         // Console output for debugging
-        System.out.println("Set Schematic Name in PrinterBlockEntity at " + getBlockPos());
-        System.out.println("Schematic Name: " + storedSchematicName);
+//        System.out.println("Set Schematic Name in PrinterBlockEntity at " + getBlockPos());
+//        System.out.println("Schematic Name: " + storedSchematicName);
     }
 
     public void setTargetPos(BlockPos targetPos) {
@@ -494,8 +532,8 @@ public class PrinterBlockEntity extends BlockEntity {
         }
 
         // Console output for debugging
-        System.out.println("Set Target Position in PrinterBlockEntity at " + getBlockPos());
-        System.out.println("Target Position: " + storedTargetPos);
+//        System.out.println("Set Target Position in PrinterBlockEntity at " + getBlockPos());
+//        System.out.println("Target Position: " + storedTargetPos);
     }
 
     @Override
