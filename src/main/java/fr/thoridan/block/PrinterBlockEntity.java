@@ -61,6 +61,7 @@ public class PrinterBlockEntity extends BlockEntity {
     private int placementDelayTicks = -1;
     private int clientPlacementDelayTicks = -1;
     private UUID ownerUUID;
+    private double tick_per_block = 0.1;
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
@@ -161,7 +162,7 @@ public class PrinterBlockEntity extends BlockEntity {
         this.pendingTargetPos = targetPos;
         this.pendingRotation = rotation;
         this.pendingSchematicName = schematicName;
-        this.placementDelayTicks = blocksTag.size()*1; // 1 tick per block
+        this.placementDelayTicks = (int) (blocksTag.size()*tick_per_block); // 1 tick per block
         this.setChanged(); // Mark the block entity as changed
     }
 
