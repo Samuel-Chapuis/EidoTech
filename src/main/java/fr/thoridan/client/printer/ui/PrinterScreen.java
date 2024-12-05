@@ -44,10 +44,9 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private EditBox posXField;
     private EditBox posYField;
     private EditBox posZField;
-    private int energyStored = menu.getBlockEntity().getEnergyStored();
-    private int maxEnergyStored = menu.getBlockEntity().getMaxEnergyStored();
     private int imageWidth;
     private int imageHeight;
+    private boolean notEnoughEnergy = false;
 
 
 
@@ -249,7 +248,12 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         // For example, let's position it at (leftPos + 50, topPos + 50) with a width and height of 100 pixels
         guiGraphics.blit(SECOND_TEXTURE, leftPos - 185, topPos, 0, 0, 180, 166);
 
-        renderEnergyBar(guiGraphics);
+        // Fetch the latest energy values
+        int currentEnergyStored = menu.getBlockEntity().getEnergyStored();
+        int currentMaxEnergyStored = menu.getBlockEntity().getMaxEnergyStored();
+
+        // Render the energy bar with the latest values
+        renderEnergyBar(guiGraphics, currentEnergyStored, currentMaxEnergyStored);
     }
 
     @Override
@@ -329,6 +333,10 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             renderMissingItemsPopup(guiGraphics, mouseX, mouseY);
         }
 
+        if (notEnoughEnergy) {
+            renderNotEnoughEnergyPopup(guiGraphics);
+        }
+
         // Get the placementDelayTicks from blockEntity
         int placementDelayTicks = menu.getBlockEntity().getClientPlacementDelayTicks();
 
@@ -343,24 +351,27 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         }
     }
 
-    private void renderEnergyBar(GuiGraphics guiGraphics){
+    private void renderEnergyBar(GuiGraphics guiGraphics, int energyStored, int maxEnergyStored){
         // Define energy bar dimensions
         int energyBarX = leftPos + 200; // Adjust position as needed
         int energyBarY = topPos + 170;
         int energyBarWidth = 8;
         int energyBarHeight = 80;
 
+        // Avoid division by zero
+        double energyRatio = maxEnergyStored > 0 ? ((double) energyStored / maxEnergyStored) : 0.0;
+
         // Calculate filled height
-        int filledHeight = (int) ((double) energyStored / maxEnergyStored * energyBarHeight);
+        int filledHeight = (int) (energyRatio * energyBarHeight);
 
-        // Draw the background
-        guiGraphics.fill(energyBarX, energyBarY, energyBarX + energyBarWidth, energyBarY + energyBarHeight, 0xFF808080); // Gray background
+        // Draw the background (optional)
+        // guiGraphics.fill(energyBarX, energyBarY, energyBarX + energyBarWidth, energyBarY + energyBarHeight, 0xFF808080); // Gray background
 
-
+        // Draw the filled portion of the energy bar
         int fillY = energyBarY + (energyBarHeight - filledHeight); // Bottom-up filling
-        guiGraphics.fill(energyBarX, fillY, energyBarX + energyBarWidth, energyBarY + energyBarHeight, 0xFFFFFFFF); // Red fill
-
+        guiGraphics.fill(energyBarX, fillY, energyBarX + energyBarWidth, energyBarY + energyBarHeight, 0xFFFFFFCC); // Red fill
     }
+
 
     private boolean isMouseOverEnergyBar(int mouseX, int mouseY) {
         int x = leftPos + 200; // Same as energyBarX
@@ -475,8 +486,40 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         guiGraphics.drawString(this.font, timeText, timeX, timeY, 0xFFFFFF, false);
     }
 
+    private void renderNotEnoughEnergyPopup(GuiGraphics guiGraphics) {
+        // Prepare the popup dimensions
+        int popupWidth = 200;
+        int popupHeight = 50;
+        int padding = 10;
 
+        // Center the popup on the screen
+        int popupX = (this.width - popupWidth) / 2;
+        int popupY = (this.height - popupHeight) / 2;
 
+        // Draw background
+        guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + popupHeight, 0xAA000000);
+
+        // Draw border
+        // Top border
+        guiGraphics.fill(popupX, popupY, popupX + popupWidth, popupY + 1, 0xFFFFFFFF);
+        // Bottom border
+        guiGraphics.fill(popupX, popupY + popupHeight - 1, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
+        // Left border
+        guiGraphics.fill(popupX, popupY, popupX + 1, popupY + popupHeight, 0xFFFFFFFF);
+        // Right border
+        guiGraphics.fill(popupX + popupWidth - 1, popupY, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
+
+        // Draw the message
+        String message = "Not enough energy to place the structure!";
+        int messageWidth = this.font.width(message);
+        int messageX = popupX + (popupWidth - messageWidth) / 2;
+        int messageY = popupY + (popupHeight - this.font.lineHeight) / 2;
+        guiGraphics.drawString(this.font, message, messageX, messageY, 0xFFFFFF, false);
+    }
+
+    public void displayNotEnoughEnergyPopup() {
+        this.notEnoughEnergy = true;
+    }
 
 
 

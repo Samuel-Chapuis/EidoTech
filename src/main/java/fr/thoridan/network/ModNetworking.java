@@ -23,6 +23,7 @@ public class ModNetworking {
         INSTANCE.registerMessage(id++, PositionUpdatePacket.class, PositionUpdatePacket::toBytes, PositionUpdatePacket::new, PositionUpdatePacket::handle);
         INSTANCE.registerMessage(id++, MissingItemsPacket.class, MissingItemsPacket::toBytes, MissingItemsPacket::new, MissingItemsPacket::handle);
         INSTANCE.registerMessage(id++, PlacementDelayUpdatePacket.class, PlacementDelayUpdatePacket::toBytes, PlacementDelayUpdatePacket::new, PlacementDelayUpdatePacket::handle);
+        INSTANCE.registerMessage(id++, NotEnoughEnergyPacket.class, NotEnoughEnergyPacket::toBytes, NotEnoughEnergyPacket::new, NotEnoughEnergyPacket::handle);
         // Register other packets here
     }
 }

@@ -5,6 +5,7 @@ import fr.thoridan.energy.CustomEnergyStorage;
 import fr.thoridan.menu.CustomItemStackHandler;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
+import fr.thoridan.network.printer.NotEnoughEnergyPacket;
 import fr.thoridan.network.printer.PlacementDelayUpdatePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -64,7 +65,8 @@ public class PrinterBlockEntity extends BlockEntity {
     private int clientPlacementDelayTicks = -1;
     private UUID ownerUUID;
     private double tick_per_block = 0.1;
-    private final CustomEnergyStorage energyStorage = new CustomEnergyStorage(10000); // Capacity of 10,000 units
+    private int energy_per_block = 1000;
+    private final CustomEnergyStorage energyStorage = new CustomEnergyStorage(100000000, this::onEnergyChanged);;
     private final LazyOptional<IEnergyStorage> lazyEnergyHandler = LazyOptional.of(() -> energyStorage);
     private int energyRequiredForPlacement = 0;
 
@@ -154,10 +156,10 @@ public class PrinterBlockEntity extends BlockEntity {
 
         // Calculate the energy required for placement
         int energyRequired = blocksTag.size() * 10; // 10 energy units per block
-        this.energyRequiredForPlacement = energyRequired;
+        this.energyRequiredForPlacement = energy_per_block;
 
         if (energyStorage.getEnergyStored() < energyRequired) {
-            player.displayClientMessage(Component.literal("Not enough energy to place the structure."), true);
+            ModNetworking.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new NotEnoughEnergyPacket());
             return;
         }
 
@@ -424,12 +426,6 @@ public class PrinterBlockEntity extends BlockEntity {
         }
         tag.putInt("Energy", energyStorage.getEnergyStored());
         tag.putInt("EnergyRequiredForPlacement", energyRequiredForPlacement);
-
-        // Console output
-//        System.out.println("Saving PrinterBlockEntity at " + getBlockPos());
-//        System.out.println("Stored Schematic Name: " + storedSchematicName);
-//        System.out.println("Stored Target Position: " + storedTargetPos);
-//        System.out.println("Stored Rotation: " + storedRotation);
     }
 
 
@@ -485,12 +481,6 @@ public class PrinterBlockEntity extends BlockEntity {
         if (tag.contains("EnergyRequiredForPlacement")) {
             energyRequiredForPlacement = tag.getInt("EnergyRequiredForPlacement");
         }
-
-        // Console output
-//        System.out.println("Loading PrinterBlockEntity at " + getBlockPos());
-//        System.out.println("Loaded Schematic Name: " + storedSchematicName);
-//        System.out.println("Loaded Target Position: " + storedTargetPos);
-//        System.out.println("Loaded Rotation: " + storedRotation);
     }
 
 
@@ -660,5 +650,12 @@ public class PrinterBlockEntity extends BlockEntity {
     }
 
 
+    private void onEnergyChanged() {
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            // Send block update to client
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
 
 }

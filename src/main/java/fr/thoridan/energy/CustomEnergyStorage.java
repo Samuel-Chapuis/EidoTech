@@ -2,16 +2,37 @@ package fr.thoridan.energy;
 
 import net.minecraftforge.energy.EnergyStorage;
 
-public class CustomEnergyStorage extends EnergyStorage {
-    public CustomEnergyStorage(int capacity) {
-        super(capacity);
-    }
+public class CustomEnergyStorage extends EnergyStorage{
+        private Runnable onChange;
 
-    public void setEnergy(int energy) {
-        this.energy = energy;
-    }
+        public CustomEnergyStorage(int capacity, Runnable onChange) {
+            super(capacity);
+            this.onChange = onChange;
+        }
 
-    public void addEnergy(int energy) {
-        this.energy = Math.min(this.energy + energy, getMaxEnergyStored());
-    }
+        @Override
+        public int receiveEnergy(int maxReceive, boolean simulate) {
+            int received = super.receiveEnergy(maxReceive, simulate);
+            if (!simulate && received > 0 && onChange != null) {
+                onChange.run();
+            }
+            return received;
+        }
+
+        @Override
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            int extracted = super.extractEnergy(maxExtract, simulate);
+            if (!simulate && extracted > 0 && onChange != null) {
+                onChange.run();
+            }
+            return extracted;
+        }
+
+        public void setEnergy(int energy) {
+            this.energy = energy;
+            if (onChange != null) {
+                onChange.run();
+            }
+        }
 }
+
