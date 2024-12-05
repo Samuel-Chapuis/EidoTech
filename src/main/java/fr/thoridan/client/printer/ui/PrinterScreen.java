@@ -41,10 +41,14 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private CycleButton<Integer> rotationButton;
     private int selectedIndex = -1;
     private String selectedSchematicName = null;
-
     private EditBox posXField;
     private EditBox posYField;
     private EditBox posZField;
+    private int energyStored = menu.getBlockEntity().getEnergyStored();
+    private int maxEnergyStored = menu.getBlockEntity().getMaxEnergyStored();
+    private int imageWidth;
+    private int imageHeight;
+
 
 
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
@@ -244,8 +248,9 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         RenderSystem.setShaderTexture(0, SECOND_TEXTURE);
         // For example, let's position it at (leftPos + 50, topPos + 50) with a width and height of 100 pixels
         guiGraphics.blit(SECOND_TEXTURE, leftPos - 185, topPos, 0, 0, 180, 166);
-    }
 
+        renderEnergyBar(guiGraphics);
+    }
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -317,6 +322,9 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
+        int energyStored = menu.getBlockEntity().getEnergyStored();
+        int maxEnergyStored = menu.getBlockEntity().getMaxEnergyStored();
+
         if (!missingItems.isEmpty()) {
             renderMissingItemsPopup(guiGraphics, mouseX, mouseY);
         }
@@ -327,6 +335,39 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         if (placementDelayTicks > 0) {
             renderPlacementDelayPopup(guiGraphics, placementDelayTicks);
         }
+
+        if (isMouseOverEnergyBar(mouseX, mouseY)) {
+            List<Component> tooltip = new ArrayList<>();
+            tooltip.add(Component.literal(energyStored + " / " + maxEnergyStored + " FE"));
+            guiGraphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
+        }
+    }
+
+    private void renderEnergyBar(GuiGraphics guiGraphics){
+        // Define energy bar dimensions
+        int energyBarX = leftPos + 200; // Adjust position as needed
+        int energyBarY = topPos + 170;
+        int energyBarWidth = 8;
+        int energyBarHeight = 80;
+
+        // Calculate filled height
+        int filledHeight = (int) ((double) energyStored / maxEnergyStored * energyBarHeight);
+
+        // Draw the background
+        guiGraphics.fill(energyBarX, energyBarY, energyBarX + energyBarWidth, energyBarY + energyBarHeight, 0xFF808080); // Gray background
+
+
+        int fillY = energyBarY + (energyBarHeight - filledHeight); // Bottom-up filling
+        guiGraphics.fill(energyBarX, fillY, energyBarX + energyBarWidth, energyBarY + energyBarHeight, 0xFFFFFFFF); // Red fill
+
+    }
+
+    private boolean isMouseOverEnergyBar(int mouseX, int mouseY) {
+        int x = leftPos + 200; // Same as energyBarX
+        int y = topPos + 170;   // Same as energyBarY
+        int width = 8;        // Same as energyBarWidth
+        int height = 80;       // Same as energyBarHeight
+        return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
     }
 
 

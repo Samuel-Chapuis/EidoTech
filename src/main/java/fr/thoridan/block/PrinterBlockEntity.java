@@ -1,6 +1,7 @@
 package fr.thoridan.block;
 
 import com.mojang.authlib.GameProfile;
+import fr.thoridan.energy.CustomEnergyStorage;
 import fr.thoridan.menu.CustomItemStackHandler;
 import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
@@ -38,6 +39,7 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.network.PacketDistributor;
@@ -62,6 +64,11 @@ public class PrinterBlockEntity extends BlockEntity {
     private int clientPlacementDelayTicks = -1;
     private UUID ownerUUID;
     private double tick_per_block = 0.1;
+    private final CustomEnergyStorage energyStorage = new CustomEnergyStorage(10000); // Capacity of 10,000 units
+    private final LazyOptional<IEnergyStorage> lazyEnergyHandler = LazyOptional.of(() -> energyStorage);
+    private int energyRequiredForPlacement = 0;
+
+
 
     public PrinterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PRINTER_BLOCK_ENTITY.get(), pos, state);
@@ -143,6 +150,20 @@ public class PrinterBlockEntity extends BlockEntity {
                 requiredItems.put(item, requiredItems.getOrDefault(item, 0) + 1);
             }
         }
+
+
+        // Calculate the energy required for placement
+        int energyRequired = blocksTag.size() * 10; // 10 energy units per block
+        this.energyRequiredForPlacement = energyRequired;
+
+        if (energyStorage.getEnergyStored() < energyRequired) {
+            player.displayClientMessage(Component.literal("Not enough energy to place the structure."), true);
+            return;
+        }
+
+        // Consume the energy
+        energyStorage.extractEnergy(energyRequiredForPlacement, false);
+        energyRequiredForPlacement = 0;
 
         // Check for missing items
         Map<Item, Integer> missingItems = getMissingItems(requiredItems);
@@ -401,6 +422,8 @@ public class PrinterBlockEntity extends BlockEntity {
         if (ownerUUID != null) {
             tag.putUUID("OwnerUUID", ownerUUID);
         }
+        tag.putInt("Energy", energyStorage.getEnergyStored());
+        tag.putInt("EnergyRequiredForPlacement", energyRequiredForPlacement);
 
         // Console output
 //        System.out.println("Saving PrinterBlockEntity at " + getBlockPos());
@@ -454,6 +477,13 @@ public class PrinterBlockEntity extends BlockEntity {
 
         if (tag.hasUUID("OwnerUUID")) {
             ownerUUID = tag.getUUID("OwnerUUID");
+        }
+
+        if (tag.contains("Energy")) {
+            energyStorage.setEnergy(tag.getInt("Energy"));
+        }
+        if (tag.contains("EnergyRequiredForPlacement")) {
+            energyRequiredForPlacement = tag.getInt("EnergyRequiredForPlacement");
         }
 
         // Console output
@@ -560,6 +590,7 @@ public class PrinterBlockEntity extends BlockEntity {
     public void setRemoved() {
         super.setRemoved();
         lazyItemHandler.invalidate();
+        lazyEnergyHandler.invalidate();
 
         // Cancel any pending placement if the block is removed
         if (placementDelayTicks > 0) {
@@ -576,6 +607,8 @@ public class PrinterBlockEntity extends BlockEntity {
     public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
         if (capability == ForgeCapabilities.ITEM_HANDLER) {
             return lazyItemHandler.cast();
+        } else if (capability == ForgeCapabilities.ENERGY) {
+            return lazyEnergyHandler.cast();
         }
         return super.getCapability(capability, side);
     }
@@ -617,6 +650,15 @@ public class PrinterBlockEntity extends BlockEntity {
     public int getClientPlacementDelayTicks() {
         return clientPlacementDelayTicks;
     }
+
+    public int getEnergyStored() {
+        return energyStorage.getEnergyStored();
+    }
+
+    public int getMaxEnergyStored() {
+        return energyStorage.getMaxEnergyStored();
+    }
+
 
 
 }
