@@ -3,6 +3,7 @@ package fr.thoridan.block;
 import fr.thoridan.menu.PrinterMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -132,5 +133,44 @@ public class PrinterBlock extends Block implements EntityBlock {
             }
         }
     }
+
+//    @Override
+//    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
+//        ItemStack stack = super.getCloneItemStack(level, pos, state);
+//        BlockEntity blockEntity = level.getBlockEntity(pos);
+//        if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
+//            CompoundTag tag = stack.getOrCreateTagElement("BlockEntityTag");
+//            printerBlockEntity.saveAdditional(tag);
+//        }
+//        return stack;
+//    }
+
+    @Override
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        // Check if we are on server side
+        if (!level.isClientSide) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof PrinterBlockEntity printerBE) {
+                // Create a new stack of your block item
+                ItemStack stack = new ItemStack(this);
+
+                // Get a compound tag representing your block entity data
+                CompoundTag beTag = new CompoundTag();
+                printerBE.saveAdditional(beTag);
+
+                // Store this tag inside the "BlockEntityTag" of the item
+                stack.addTagElement("BlockEntityTag", beTag);
+
+                // Drop the item with the inventory data
+                popResource(level, pos, stack);
+            }
+        }
+
+        // Call super to handle normal block destruction (if needed)
+        super.playerWillDestroy(level, pos, state, player);
+    }
+
+
+
 
 }

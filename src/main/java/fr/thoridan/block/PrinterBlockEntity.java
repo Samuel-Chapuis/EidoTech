@@ -395,6 +395,7 @@ public class PrinterBlockEntity extends BlockEntity {
     public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put("inventory", itemHandler.serializeNBT());
+
         if (storedTargetPos != null) {
             tag.putInt("TargetX", storedTargetPos.getX());
             tag.putInt("TargetY", storedTargetPos.getY());
@@ -433,6 +434,7 @@ public class PrinterBlockEntity extends BlockEntity {
     public void load(CompoundTag tag) {
         super.load(tag);
         itemHandler.deserializeNBT(tag.getCompound("inventory"));
+
         if (tag.contains("TargetX") && tag.contains("TargetY") && tag.contains("TargetZ")) {
             storedTargetPos = new BlockPos(tag.getInt("TargetX"), tag.getInt("TargetY"), tag.getInt("TargetZ"));
         } else {
