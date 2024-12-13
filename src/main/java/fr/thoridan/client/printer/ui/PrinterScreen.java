@@ -9,6 +9,7 @@ import fr.thoridan.network.printer.PlaceStructurePacket;
 import fr.thoridan.network.printer.PositionUpdatePacket;
 import fr.thoridan.network.printer.RotationChangePacket;
 import fr.thoridan.network.printer.SchematicSelectionPacket;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -162,7 +163,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     }
 
     private void createSchematicButtons() {
-        int startY = topPos + 65;
+        int startY = topPos + 120;
         int buttonHeight = 10; // Adjust as needed
         int x = leftPos - 100 - 31 - 50;  // Adjust padding as needed
 
@@ -246,7 +247,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         // Now draw the additional background texture
         RenderSystem.setShaderTexture(0, SECOND_TEXTURE);
         // For example, let's position it at (leftPos + 50, topPos + 50) with a width and height of 100 pixels
-        guiGraphics.blit(SECOND_TEXTURE, leftPos - 185, topPos, 0, 0, 180, 166);
+        guiGraphics.blit(SECOND_TEXTURE, leftPos - 185, topPos, 0, 0, 180, this.imageHeight);
 
         // Fetch the latest energy values
         int currentEnergyStored = menu.getBlockEntity().getEnergyStored();
@@ -319,6 +320,19 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         this.missingItems = missingItems;
     }
 
+    private void preparePopupRendering() {
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+    }
+
+    private void restoreRenderingState() {
+        RenderSystem.disableBlend();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableDepthTest();
+    }
+
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
@@ -328,6 +342,9 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
 
         int energyStored = menu.getBlockEntity().getEnergyStored();
         int maxEnergyStored = menu.getBlockEntity().getMaxEnergyStored();
+        int placementDelayTicks = menu.getBlockEntity().getClientPlacementDelayTicks();
+
+        preparePopupRendering();
 
         if (!missingItems.isEmpty()) {
             renderMissingItemsPopup(guiGraphics, mouseX, mouseY);
@@ -337,12 +354,11 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             renderNotEnoughEnergyPopup(guiGraphics);
         }
 
-        // Get the placementDelayTicks from blockEntity
-        int placementDelayTicks = menu.getBlockEntity().getClientPlacementDelayTicks();
-
         if (placementDelayTicks > 0) {
             renderPlacementDelayPopup(guiGraphics, placementDelayTicks);
         }
+
+        restoreRenderingState();
 
         if (isMouseOverEnergyBar(mouseX, mouseY)) {
             List<Component> tooltip = new ArrayList<>();
@@ -510,11 +526,13 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         guiGraphics.fill(popupX + popupWidth - 1, popupY, popupX + popupWidth, popupY + popupHeight, 0xFFFFFFFF);
 
         // Draw the message
-        String message = "Not enough energy to place the structure!";
+        String message = "Not enough energy ";
+        String message2 = "to place the structure!";
         int messageWidth = this.font.width(message);
         int messageX = popupX + (popupWidth - messageWidth) / 2;
         int messageY = popupY + (popupHeight - this.font.lineHeight) / 2;
         guiGraphics.drawString(this.font, message, messageX, messageY, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, message2, messageX, messageY + 10, 0xFFFFFF, false);
     }
 
     public void displayNotEnoughEnergyPopup() {
