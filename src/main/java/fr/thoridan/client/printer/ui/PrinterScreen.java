@@ -14,11 +14,17 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +54,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private int imageWidth;
     private int imageHeight;
     private boolean notEnoughEnergy = false;
+    private static final int MAX_BLOCKS = 11000;
 
 
 
@@ -65,12 +72,37 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             File[] files = schematicsFolder.listFiles((dir, name) -> name.endsWith(".schematic") || name.endsWith(".nbt"));
             if (files != null) {
                 for (File file : files) {
-                    schematics.add(file.getName());
+                    // Attempt to read the file and check block count
+                    CompoundTag nbtData = null;
+                    try (FileInputStream fis = new FileInputStream(file)) {
+                        nbtData = NbtIo.readCompressed(fis);
+                    } catch (IOException e) {
+                        // If we fail to read NBT, skip this file
+                        System.err.println("Failed to read schematic file: " + file.getName() + " - " + e.getMessage());
+                        continue;
+                    }
+
+                    // Check the size of the "blocks" list
+                    if (nbtData != null && nbtData.contains("blocks", Tag.TAG_LIST)) {
+                        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
+                        int blockCount = blocksTag.size();
+
+                        if (blockCount <= MAX_BLOCKS) {
+                            // If within limit, add to schematics list
+                            schematics.add(file.getName());
+                        } else {
+                            // If exceeds the limit, do not add and possibly log or inform the user
+                            System.out.println("Skipping " + file.getName() + " because it contains " + blockCount + " blocks (over " + MAX_BLOCKS + " limit).");
+                        }
+                    } else {
+                        // If there's no "blocks" tag or it's invalid, you can decide what to do:
+                        // For safety, maybe skip adding this schematic as well.
+                        System.out.println("Skipping " + file.getName() + " - no valid block data found.");
+                    }
                 }
             }
         }
     }
-
 
     @Override
     protected void init() {

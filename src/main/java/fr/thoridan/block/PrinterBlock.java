@@ -134,39 +134,33 @@ public class PrinterBlock extends Block implements EntityBlock {
         }
     }
 
-//    @Override
-//    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
-//        ItemStack stack = super.getCloneItemStack(level, pos, state);
-//        BlockEntity blockEntity = level.getBlockEntity(pos);
-//        if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-//            CompoundTag tag = stack.getOrCreateTagElement("BlockEntityTag");
-//            printerBlockEntity.saveAdditional(tag);
-//        }
-//        return stack;
-//    }
-
     @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        // Check if we are on server side
         if (!level.isClientSide) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PrinterBlockEntity printerBE) {
-                // Create a new stack of your block item
                 ItemStack stack = new ItemStack(this);
 
-                // Get a compound tag representing your block entity data
                 CompoundTag beTag = new CompoundTag();
                 printerBE.saveAdditional(beTag);
 
-                // Store this tag inside the "BlockEntityTag" of the item
-                stack.addTagElement("BlockEntityTag", beTag);
+                // Remove unwanted keys
+                beTag.remove("SchematicName");
+                beTag.remove("Rotation");
+                beTag.remove("TargetX");
+                beTag.remove("TargetY");
+                beTag.remove("TargetZ");
+                beTag.remove("PendingTargetX");
+                beTag.remove("PendingTargetY");
+                beTag.remove("PendingTargetZ");
+                beTag.remove("PendingRotation");
+                beTag.remove("PendingSchematicName");
+                // Remove any other fields that you do not want to preserve
 
-                // Drop the item with the inventory data
+                stack.addTagElement("BlockEntityTag", beTag);
                 popResource(level, pos, stack);
             }
         }
-
-        // Call super to handle normal block destruction (if needed)
         super.playerWillDestroy(level, pos, state, player);
     }
 
