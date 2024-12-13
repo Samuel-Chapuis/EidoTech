@@ -54,8 +54,11 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private int imageWidth;
     private int imageHeight;
     private boolean notEnoughEnergy = false;
+    private static final int MAX_DISTANCE_ALLOWED = 50;
     private static final int MAX_BLOCKS = 11000;
-
+    private long lastChangeTime = 0L;
+    private boolean needsValidation = false;
+    private static final long VALIDATION_DELAY_MS = 500; // half a second delay
 
 
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
@@ -66,43 +69,6 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         loadSchematics();
     }
 
-    private void loadSchematics() {
-        File schematicsFolder = new File(Minecraft.getInstance().gameDirectory, "schematics");
-        if (schematicsFolder.exists() && schematicsFolder.isDirectory()) {
-            File[] files = schematicsFolder.listFiles((dir, name) -> name.endsWith(".schematic") || name.endsWith(".nbt"));
-            if (files != null) {
-                for (File file : files) {
-                    // Attempt to read the file and check block count
-                    CompoundTag nbtData = null;
-                    try (FileInputStream fis = new FileInputStream(file)) {
-                        nbtData = NbtIo.readCompressed(fis);
-                    } catch (IOException e) {
-                        // If we fail to read NBT, skip this file
-                        System.err.println("Failed to read schematic file: " + file.getName() + " - " + e.getMessage());
-                        continue;
-                    }
-
-                    // Check the size of the "blocks" list
-                    if (nbtData != null && nbtData.contains("blocks", Tag.TAG_LIST)) {
-                        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
-                        int blockCount = blocksTag.size();
-
-                        if (blockCount <= MAX_BLOCKS) {
-                            // If within limit, add to schematics list
-                            schematics.add(file.getName());
-                        } else {
-                            // If exceeds the limit, do not add and possibly log or inform the user
-                            System.out.println("Skipping " + file.getName() + " because it contains " + blockCount + " blocks (over " + MAX_BLOCKS + " limit).");
-                        }
-                    } else {
-                        // If there's no "blocks" tag or it's invalid, you can decide what to do:
-                        // For safety, maybe skip adding this schematic as well.
-                        System.out.println("Skipping " + file.getName() + " - no valid block data found.");
-                    }
-                }
-            }
-        }
-    }
 
     @Override
     protected void init() {
@@ -131,6 +97,11 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         posZField = new EditBox(this.font, leftPos - 1*( inputFieldWidth + 10), topPos + inputFieldHeight + 15, inputFieldWidth, inputFieldHeight, Component.literal("Z"));
         posZField.setValue(String.valueOf(this.minecraft.player.getBlockZ()));
         this.addRenderableWidget(posZField);
+
+        // Add responders to the input fields
+        posXField.setResponder(value -> onPositionFieldChange());
+        posYField.setResponder(value -> onPositionFieldChange());
+        posZField.setResponder(value -> onPositionFieldChange());
 
         // Load stored values from the block entity
         PrinterBlockEntity blockEntity = menu.getBlockEntity();
@@ -193,6 +164,46 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
                         .build()
         );
     }
+
+
+    private void loadSchematics() {
+        File schematicsFolder = new File(Minecraft.getInstance().gameDirectory, "schematics");
+        if (schematicsFolder.exists() && schematicsFolder.isDirectory()) {
+            File[] files = schematicsFolder.listFiles((dir, name) -> name.endsWith(".schematic") || name.endsWith(".nbt"));
+            if (files != null) {
+                for (File file : files) {
+                    // Attempt to read the file and check block count
+                    CompoundTag nbtData = null;
+                    try (FileInputStream fis = new FileInputStream(file)) {
+                        nbtData = NbtIo.readCompressed(fis);
+                    } catch (IOException e) {
+                        // If we fail to read NBT, skip this file
+                        System.err.println("Failed to read schematic file: " + file.getName() + " - " + e.getMessage());
+                        continue;
+                    }
+
+                    // Check the size of the "blocks" list
+                    if (nbtData != null && nbtData.contains("blocks", Tag.TAG_LIST)) {
+                        ListTag blocksTag = nbtData.getList("blocks", Tag.TAG_COMPOUND);
+                        int blockCount = blocksTag.size();
+
+                        if (blockCount <= MAX_BLOCKS) {
+                            // If within limit, add to schematics list
+                            schematics.add(file.getName());
+                        } else {
+                            // If exceeds the limit, do not add and possibly log or inform the user
+                            System.out.println("Skipping " + file.getName() + " because it contains " + blockCount + " blocks (over " + MAX_BLOCKS + " limit).");
+                        }
+                    } else {
+                        // If there's no "blocks" tag or it's invalid, you can decide what to do:
+                        // For safety, maybe skip adding this schematic as well.
+                        System.out.println("Skipping " + file.getName() + " - no valid block data found.");
+                    }
+                }
+            }
+        }
+    }
+
 
     private void createSchematicButtons() {
         int startY = topPos + 120;
@@ -267,8 +278,6 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     }
 
 
-
-
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTicks, int mouseX, int mouseY) {
         // Draw the main background texture
@@ -330,6 +339,8 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     public void removed() {
         super.removed();
 
+        validatePosition();
+
         try {
             int x = Integer.parseInt(posXField.getValue());
             int y = Integer.parseInt(posYField.getValue());
@@ -371,6 +382,9 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         this.renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+
+        // Check if we need to validate after a delay
+        validatePositionIfNeeded();
 
         int energyStored = menu.getBlockEntity().getEnergyStored();
         int maxEnergyStored = menu.getBlockEntity().getMaxEnergyStored();
@@ -571,6 +585,48 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
         this.notEnoughEnergy = true;
     }
 
+    private void onPositionFieldChange() {
+        // Mark that we need to validate after a delay
+        needsValidation = true;
+        lastChangeTime = System.currentTimeMillis();
+    }
 
+    private void validatePositionIfNeeded() {
+        if (!needsValidation) {
+            return;
+        }
 
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastChangeTime >= VALIDATION_DELAY_MS) {
+            // Enough time has passed since last change, perform validation now
+            validatePosition();
+            needsValidation = false;
+        }
+    }
+
+    private void validatePosition() {
+        BlockPos machinePos = menu.getBlockEntity().getBlockPos();
+        try {
+            int x = Integer.parseInt(posXField.getValue());
+            int y = Integer.parseInt(posYField.getValue());
+            int z = Integer.parseInt(posZField.getValue());
+
+            int dx = x - machinePos.getX();
+            int dy = y - machinePos.getY();
+            int dz = z - machinePos.getZ();
+            double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (dist > MAX_DISTANCE_ALLOWED) {
+                // If too far, revert to machine's position (or clamp)
+                posXField.setValue(String.valueOf(machinePos.getX()));
+                posYField.setValue(String.valueOf(machinePos.getY()));
+                posZField.setValue(String.valueOf(machinePos.getZ()));
+            }
+        } catch (NumberFormatException e) {
+            // If invalid input, revert to machine position or handle gracefully
+            posXField.setValue(String.valueOf(machinePos.getX()));
+            posYField.setValue(String.valueOf(machinePos.getY()));
+            posZField.setValue(String.valueOf(machinePos.getZ()));
+        }
+    }
 }

@@ -40,6 +40,8 @@ import java.awt.*;
 public class PrinterBlock extends Block implements EntityBlock {
     public static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+
+
     public PrinterBlock(Properties properties) {
         super(properties
                 .strength(1.0f)
@@ -50,10 +52,12 @@ public class PrinterBlock extends Block implements EntityBlock {
         this.registerDefaultState(this.defaultBlockState().setValue(FACING, Direction.NORTH));
     }
 
+
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
+
 
     @Nullable
     @Override
@@ -61,6 +65,7 @@ public class PrinterBlock extends Block implements EntityBlock {
 //        System.out.println("newBlockEntity called at " + pos);
         return new PrinterBlockEntity(pos, state);
     }
+
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
@@ -90,7 +95,6 @@ public class PrinterBlock extends Block implements EntityBlock {
     }
 
 
-
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
@@ -101,15 +105,18 @@ public class PrinterBlock extends Block implements EntityBlock {
         builder.add(FACING);
     }
 
+
     @Override
     public boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
         return false;
     }
 
+
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter plevel, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
+
 
     @Nullable
     @Override
@@ -124,6 +131,7 @@ public class PrinterBlock extends Block implements EntityBlock {
         return null;
     }
 
+
     @Override
     public void setPlacedBy(Level world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         if (placer instanceof Player player) {
@@ -133,6 +141,7 @@ public class PrinterBlock extends Block implements EntityBlock {
             }
         }
     }
+
 
     @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
@@ -163,8 +172,5 @@ public class PrinterBlock extends Block implements EntityBlock {
         }
         super.playerWillDestroy(level, pos, state, player);
     }
-
-
-
 
 }
