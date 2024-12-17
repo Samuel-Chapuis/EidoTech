@@ -64,7 +64,7 @@ public class PrinterBlockEntity extends BlockEntity {
     private int placementDelayTicks = -1;
     private int clientPlacementDelayTicks = -1;
     private UUID ownerUUID;
-    private double tick_per_block = 0.1;
+    private double tick_per_block = 2;
     private int energy_per_block = 1000;
     private final CustomEnergyStorage energyStorage = new CustomEnergyStorage(100000000, this::onEnergyChanged);;
     private final LazyOptional<IEnergyStorage> lazyEnergyHandler = LazyOptional.of(() -> energyStorage);
