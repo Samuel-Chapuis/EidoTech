@@ -7,7 +7,9 @@ import fr.thoridan.item.ModCreativeModTabs;
 import fr.thoridan.item.ModItems;
 import fr.thoridan.menu.ModMenus;
 import fr.thoridan.network.ModNetworking;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
@@ -19,6 +21,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -54,6 +57,25 @@ public class Techutilities {
         if(event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(ModBlocks.UNIVERSAL_SEAL_BLOCK);
         }
+    }
+
+    public static void broadcastServerMessage(String message, boolean actionBar) {
+        // Forge's way to get the current MinecraftServer instance
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+
+        // If there's no server running (e.g., during dev in singleplayer menu), do nothing
+        if (server == null) {
+            LOGGER.warn("Tried to broadcast a server message, but the server is null!");
+            return;
+        }
+
+        // Broadcast a "system" message. By default, it shows as
+        // <Server> message
+        // in chat if 'actionBar' is false.
+        server.getPlayerList().broadcastSystemMessage(
+                Component.literal(message),
+                actionBar
+        );
     }
 
     public static ResourceLocation rl(String path) {

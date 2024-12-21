@@ -1,6 +1,7 @@
 package fr.thoridan.block;
 
 import com.mojang.authlib.GameProfile;
+import fr.thoridan.Techutilities;
 import fr.thoridan.energy.CustomEnergyStorage;
 import fr.thoridan.menu.CustomItemStackHandler;
 import fr.thoridan.network.ModNetworking;
@@ -53,7 +54,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 
-
 public class PrinterBlockEntity extends BlockEntity {
     private UUID ownerUUID;
     private BlockPos pendingTargetPos;
@@ -65,7 +65,7 @@ public class PrinterBlockEntity extends BlockEntity {
 
     private int placementDelayTicks = -1;
     private int clientPlacementDelayTicks = -1;
-    private double tick_per_block = 2;
+    private double tick_per_block = 0.1;
     private int energy_per_block = 1000;
 
     // Energy
@@ -101,18 +101,30 @@ public class PrinterBlockEntity extends BlockEntity {
      */
     public void placeStructureAt(BlockPos targetPos, Rotation rotation, String schematicName, ServerPlayer player) {
         Level level = getLevel();
-        if (level == null || level.isClientSide()) return;
+        if (level == null || level.isClientSide()) {
+            Techutilities.broadcastServerMessage("Cannot place structure on client side.", false);
+            return;
+        }
+        Techutilities.broadcastServerMessage("Placing structure...", false);
 
         // If a placement is already in progress, notify player
         if (placementDelayTicks > 0) {
-            player.displayClientMessage(Component.literal("A structure placement is already in progress."), true);
+            Techutilities.broadcastServerMessage("A structure placement is already in progress.", false);
             return;
         }
 
-        if (!(level instanceof ServerLevel serverLevel)) return;
+        if (!(level instanceof ServerLevel serverLevel)) {
+            Techutilities.broadcastServerMessage("Cannot place structure on client side.", false);
+            return;
+        }
+        Techutilities.broadcastServerMessage("Server level found.", false);
 
         // Load schematic data once (palette + blocks)
-        if (!loadSchematicData(schematicName, serverLevel)) return;
+        if (!loadSchematicData(schematicName, serverLevel)) {
+            Techutilities.broadcastServerMessage("Failed to load schematic data.", false);
+            return;
+        }
+        Techutilities.broadcastServerMessage("Schematic data loaded.", false);
 
         // Calculate required items
         Map<Item, Integer> requiredItems = calculateRequiredItems(rotation, loadedPalette, loadedBlocksTag);
@@ -122,15 +134,19 @@ public class PrinterBlockEntity extends BlockEntity {
         // Check if there's enough energy
         if (energyStorage.getEnergyStored() < energyRequired) {
             ModNetworking.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new NotEnoughEnergyPacket());
+            Techutilities.broadcastServerMessage("Not enough energy to place the structure.", false);
             return;
         }
+        Techutilities.broadcastServerMessage("Energy check passed.", false);
 
         // Check if there's enough items
         Map<Item, Integer> missingItems = getMissingItems(requiredItems);
         if (!missingItems.isEmpty()) {
             sendMissingItemsToClient(missingItems, player);
+            Techutilities.broadcastServerMessage("Not enough items to place the structure.", false);
             return;
         }
+        Techutilities.broadcastServerMessage("Item check passed.", false);
 
         // Consume items & energy
         consumeItems(requiredItems);
@@ -141,7 +157,7 @@ public class PrinterBlockEntity extends BlockEntity {
         pendingRotation = rotation;
         pendingSchematicName = schematicName;
         placementDelayTicks = (int) (totalBlocks * tick_per_block);
-
+        Techutilities.broadcastServerMessage("Structure placement scheduled. It will takes" + tick_per_block + " ticks", false);
         setChanged();
     }
 
@@ -152,10 +168,13 @@ public class PrinterBlockEntity extends BlockEntity {
         Level level = getLevel();
         if (!(level instanceof ServerLevel serverLevel)) return;
 
+        Techutilities.broadcastServerMessage("Perform structure placement", false);
+
         // Create a FakePlayer with SURVIVAL mode
         GameProfile ownerProfile = new GameProfile(ownerUUID, "[PrinterOwner]");
         FakePlayer fakePlayer = FakePlayerFactory.get(serverLevel, ownerProfile);
         fakePlayer.setGameMode(GameType.SURVIVAL);
+        Techutilities.broadcastServerMessage("Fake player created", false);
 
         // We already have loadedSchematicNbt, loadedPalette, loadedBlocksTag
         if (loadedSchematicNbt == null || loadedPalette == null || loadedBlocksTag == null) {
@@ -163,6 +182,7 @@ public class PrinterBlockEntity extends BlockEntity {
             resetPlacement();
             return;
         }
+        Techutilities.broadcastServerMessage("Schematic data loaded", false);
 
         // Place each block
         for (int i = 0; i < loadedBlocksTag.size(); i++) {
