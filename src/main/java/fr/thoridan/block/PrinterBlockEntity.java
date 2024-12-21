@@ -8,6 +8,7 @@ import fr.thoridan.network.ModNetworking;
 import fr.thoridan.network.printer.MissingItemsPacket;
 import fr.thoridan.network.printer.NotEnoughEnergyPacket;
 import fr.thoridan.network.printer.PlacementDelayUpdatePacket;
+import fr.thoridan.network.printer.UploadSchematicPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderGetter;
@@ -258,6 +259,45 @@ public class PrinterBlockEntity extends BlockEntity {
         loadedBlocksTag = loadedSchematicNbt.getList("blocks", Tag.TAG_COMPOUND);
         return true;
     }
+
+    private void uploadSchematicFromClient(String filePath, String schematicName) {
+        File file = new File(filePath);
+
+        // 1) Read raw bytes from the file
+        byte[] fileBytes;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            fileBytes = fis.readAllBytes();
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+            return;
+        }
+
+        // 2) (Optional) Re-compress or confirm it's compressed if needed
+        //    For example, if your file is not already compressed, you might do:
+        //    fileBytes = MyCompressionUtils.compress(fileBytes);
+
+        // 3) Split into chunks (e.g. 32 KB each)
+        final int CHUNK_SIZE = 32 * 1024;
+        int totalChunks = (fileBytes.length + CHUNK_SIZE - 1) / CHUNK_SIZE; // ceiling division
+
+        for (int i = 0; i < totalChunks; i++) {
+            int start = i * CHUNK_SIZE;
+            int end = Math.min(start + CHUNK_SIZE, fileBytes.length);
+            byte[] chunkData = Arrays.copyOfRange(fileBytes, start, end);
+
+            // 4) Send each chunk to the server
+            ModNetworking.INSTANCE.sendToServer(new UploadSchematicPacket(
+                    schematicName,  // or file.getName()
+                    i,
+                    totalChunks,
+                    chunkData
+            ));
+        }
+
+        // At this point, the server should accumulate the data
+        // in something like SchematicManager.storeChunk(...).
+    }
+
 
     /**
      * Returns how many of each item is required by rotating the block states and counting them.

@@ -40,17 +40,15 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private static final long VALIDATION_DELAY_MS = 500; // half-second
     private boolean needsValidation = false;
     private long lastChangeTime = 0L;
-
     private List<String> schematics = new ArrayList<>();
     private List<TextButton> schematicButtons = new ArrayList<>();
     private Map<Item, Integer> missingItems = Collections.emptyMap();
-
     private EditBox posXField, posYField, posZField;
     private CycleButton<Integer> rotationButton;
-
     private String selectedSchematicName;
     private int selectedIndex = -1;
     private boolean notEnoughEnergy = false;
+    private EditBox filePathField;
 
     // Adjusted widths & heights to accommodate extra UI
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
@@ -217,16 +215,73 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             int color = (i == selectedIndex) ? 0xFFFF00 : 0xFFFFFF;
 
             var button = new TextButton(x, startY + i * (buttonHeight + 2), textWidth, buttonHeight, text, b -> {
+                // 1) Update selection UI
                 selectedIndex = index;
                 selectedSchematicName = name;
                 updateSchematicButtonColors();
-                ModNetworking.INSTANCE.sendToServer(new SchematicSelectionPacket(menu.getBlockEntity().getBlockPos(), selectedSchematicName));
+
+                // 2) Immediately upload schematic from client's local folder
+                uploadSchematicFromClient(selectedSchematicName);
+
+                // 3) Optionally send a SchematicSelectionPacket
+                //    (assuming the server also expects to store the name or do something else)
+                ModNetworking.INSTANCE.sendToServer(new SchematicSelectionPacket(
+                        menu.getBlockEntity().getBlockPos(),
+                        selectedSchematicName
+                ));
+
             }, color);
 
             schematicButtons.add(button);
             addRenderableWidget(button);
         }
     }
+
+
+    private void uploadSchematicFromClient(String schematicName) {
+        // 1) Find the local file in the "schematics" folder
+        File file = new File(Minecraft.getInstance().gameDirectory, "schematics/" + schematicName);
+        if (!file.exists()) {
+            System.out.println("Schematic file not found on client: " + file.getAbsolutePath());
+            Techutilities.broadcastServerMessage("Schematic file not found on client: " + file.getAbsolutePath(), false);
+            return;
+        }
+
+        // 2) Read its bytes
+        byte[] fileBytes;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            fileBytes = fis.readAllBytes(); // Java 9+
+        } catch (IOException e) {
+            System.out.println("Error reading schematic file: " + e.getMessage());
+            Techutilities.broadcastServerMessage("Error reading schematic file: " + e.getMessage(), false);
+            return;
+        }
+
+        // 3) (Optional) compress if needed. If .nbt is already compressed, you might skip this.
+        //    byte[] fileBytes = MyCompressionUtils.compress(originalBytes);
+
+        // 4) Split the byte[] into manageable chunks
+        final int CHUNK_SIZE = 32 * 1024; // 32 KB
+        int totalChunks = (fileBytes.length + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+        // 5) Send each chunk to server
+        for (int i = 0; i < totalChunks; i++) {
+            int start = i * CHUNK_SIZE;
+            int end = Math.min(start + CHUNK_SIZE, fileBytes.length);
+            byte[] chunkData = Arrays.copyOfRange(fileBytes, start, end);
+
+            // This is your custom packet class that handles uploading
+            ModNetworking.INSTANCE.sendToServer(new UploadSchematicPacket(
+                    schematicName, // or you might just pass the file's base name
+                    i,
+                    totalChunks,
+                    chunkData
+            ));
+        }
+
+        System.out.println("Schematic upload initiated for " + schematicName);
+    }
+
 
     private void updateSchematicButtonColors() {
         for (int i = 0; i < schematicButtons.size(); i++) {
