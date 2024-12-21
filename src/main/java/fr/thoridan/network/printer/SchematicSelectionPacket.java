@@ -7,6 +7,10 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+/**
+ * Sent from client -> server to select which schematic name
+ * should be stored in the PrinterBlockEntity.
+ */
 public class SchematicSelectionPacket {
     private final BlockPos blockEntityPos;
     private final String schematicName;
@@ -32,9 +36,8 @@ public class SchematicSelectionPacket {
             if (player != null) {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
-                if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    // Update the block entity's stored schematic name
-                    printerBlockEntity.setSchematicName(schematicName);
+                if (blockEntity instanceof PrinterBlockEntity printer) {
+                    printer.setSchematicName(schematicName);
                 }
             }
         });
