@@ -7,6 +7,9 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+/**
+ * Sent from client -> server to update the block entity's stored target position.
+ */
 public class PositionUpdatePacket {
     private final BlockPos blockEntityPos;
     private final BlockPos targetPos;
@@ -32,9 +35,8 @@ public class PositionUpdatePacket {
             if (player != null) {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
-                if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    // Update the block entity's stored target position
-                    printerBlockEntity.setTargetPos(targetPos);
+                if (blockEntity instanceof PrinterBlockEntity printer) {
+                    printer.setTargetPos(targetPos);
                 }
             }
         });

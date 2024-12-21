@@ -8,6 +8,9 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+/**
+ * Sent from client -> server to update the printer's rotation setting.
+ */
 public class RotationChangePacket {
     private final BlockPos blockEntityPos;
     private final Rotation rotation;
@@ -19,8 +22,7 @@ public class RotationChangePacket {
 
     public RotationChangePacket(FriendlyByteBuf buf) {
         this.blockEntityPos = buf.readBlockPos();
-        int rotationOrdinal = buf.readInt();
-        this.rotation = Rotation.values()[rotationOrdinal];
+        this.rotation = Rotation.values()[buf.readInt()];
     }
 
     public void toBytes(FriendlyByteBuf buf) {
@@ -34,9 +36,8 @@ public class RotationChangePacket {
             if (player != null) {
                 var level = player.level();
                 var blockEntity = level.getBlockEntity(blockEntityPos);
-                if (blockEntity instanceof PrinterBlockEntity printerBlockEntity) {
-                    // Update the block entity's stored rotation
-                    printerBlockEntity.setRotation(rotation);
+                if (blockEntity instanceof PrinterBlockEntity printer) {
+                    printer.setRotation(rotation);
                 }
             }
         });

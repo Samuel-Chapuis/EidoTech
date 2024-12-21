@@ -10,6 +10,9 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+/**
+ * Sent from server -> client to update the printer's current placement delay.
+ */
 public class PlacementDelayUpdatePacket {
     private final BlockPos pos;
     private final int placementDelayTicks;
@@ -31,7 +34,6 @@ public class PlacementDelayUpdatePacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // Handle packet on client side
             ClientLevel level = Minecraft.getInstance().level;
             if (level != null) {
                 BlockEntity be = level.getBlockEntity(pos);

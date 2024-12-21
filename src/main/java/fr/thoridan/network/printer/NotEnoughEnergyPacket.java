@@ -7,26 +7,20 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+/**
+ * Sent from server -> client to notify that there's not enough energy to place the structure.
+ */
 public class NotEnoughEnergyPacket {
+    public NotEnoughEnergyPacket() {}
 
-    public NotEnoughEnergyPacket() {
-        // Empty constructor, no data to serialize
-    }
+    public NotEnoughEnergyPacket(FriendlyByteBuf buf) {}
 
-    public NotEnoughEnergyPacket(FriendlyByteBuf buf) {
-        // Empty, no data to read
-    }
-
-    public void toBytes(FriendlyByteBuf buf) {
-        // Empty, no data to write
-    }
+    public void toBytes(FriendlyByteBuf buf) {}
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // This runs on the client side
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.screen instanceof PrinterScreen) {
-                PrinterScreen screen = (PrinterScreen) mc.screen;
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof PrinterScreen screen) {
                 screen.displayNotEnoughEnergyPopup();
             }
         });

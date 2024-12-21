@@ -12,6 +12,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+/**
+ * Sent from server -> client to inform the client which items are missing.
+ */
 public class MissingItemsPacket {
     private final Map<Item, Integer> missingItems;
 
@@ -34,7 +37,7 @@ public class MissingItemsPacket {
 
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeInt(missingItems.size());
-        for (Map.Entry<Item, Integer> entry : missingItems.entrySet()) {
+        for (var entry : missingItems.entrySet()) {
             buf.writeUtf(ForgeRegistries.ITEMS.getKey(entry.getKey()).toString());
             buf.writeInt(entry.getValue());
         }
@@ -42,11 +45,9 @@ public class MissingItemsPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // On client side
-            Minecraft mc = Minecraft.getInstance();
-            // Get the open screen and update it with the missing items
-            if (mc.screen instanceof PrinterScreen) {
-                ((PrinterScreen) mc.screen).setMissingItems(missingItems);
+            var mc = Minecraft.getInstance();
+            if (mc.screen instanceof PrinterScreen screen) {
+                screen.setMissingItems(missingItems);
             }
         });
         ctx.get().setPacketHandled(true);
