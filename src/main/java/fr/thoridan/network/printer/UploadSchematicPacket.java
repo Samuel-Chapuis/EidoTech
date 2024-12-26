@@ -6,12 +6,13 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
+
 public class UploadSchematicPacket {
-    // For example:
     private final String schematicName;
     private final int chunkIndex;
     private final int totalChunks;
     private final byte[] chunkData;
+    private static final int MAX_SCHEMATIC_SIZE = 1_000_000; // Limit: e.g. 1 MB per schematic
 
     public UploadSchematicPacket(String schematicName, int chunkIndex, int totalChunks, byte[] chunkData) {
         this.schematicName = schematicName;
@@ -39,10 +40,26 @@ public class UploadSchematicPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // SERVER-SIDE: Accumulate or store the chunk.
             ServerPlayer player = ctx.get().getSender();
             if (player != null) {
-                SchematicManager.storeChunk(player.getUUID(), schematicName, chunkIndex, totalChunks, chunkData);
+                // 1) Check extension
+                //    (We keep it simple: must end with .nbt OR .schematic)
+                String lowerCaseName = schematicName.toLowerCase();
+                if (!(lowerCaseName.endsWith(".nbt") || lowerCaseName.endsWith(".schematic"))) {
+                    // Optionally, send a chat message or log it
+                    System.out.println("Rejected upload: invalid extension for " + schematicName);
+                    return; // Stop here
+                }
+
+                // 2) Call SchematicManager, which does the main chunk handling
+                SchematicManager.storeChunk(
+                        player.getUUID(),
+                        schematicName,
+                        chunkIndex,
+                        totalChunks,
+                        chunkData,
+                        MAX_SCHEMATIC_SIZE
+                );
             }
         });
         ctx.get().setPacketHandled(true);
