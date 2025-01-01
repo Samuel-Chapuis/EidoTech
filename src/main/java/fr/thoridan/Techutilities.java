@@ -64,18 +64,20 @@ public class Techutilities {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
 
         // If there's no server running (e.g., during dev in singleplayer menu), do nothing
-        if (server == null) {
-            LOGGER.warn("Tried to broadcast a server message, but the server is null!");
-            return;
-        }
+
+//        if (server == null) {
+//            LOGGER.warn("Tried to broadcast a server message, but the server is null!");
+//            return;
+//        }
 
         // Broadcast a "system" message. By default, it shows as
         // <Server> message
+
         // in chat if 'actionBar' is false.
-        server.getPlayerList().broadcastSystemMessage(
-                Component.literal(message),
-                actionBar
-        );
+//        server.getPlayerList().broadcastSystemMessage(
+//                Component.literal(message),
+//                actionBar
+//        );
     }
 
     public static ResourceLocation rl(String path) {

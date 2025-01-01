@@ -66,7 +66,7 @@ public class PrinterBlockEntity extends BlockEntity {
 
     private int placementDelayTicks = -1;
     private int clientPlacementDelayTicks = -1;
-    private double tick_per_block = 1;
+    private double tick_per_block = 3;
     private int energy_per_block = 1000;
 
     // Energy

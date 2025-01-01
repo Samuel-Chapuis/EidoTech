@@ -351,7 +351,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     }
 
     private void renderMissingItemsPopup(GuiGraphics guiGraphics) {
-        int minW = 150, pad = 10;
+        int minW = 150, pad = 6;
         int titleWidth = font.width("Missing Items:");
         int maxW = titleWidth;
         for (var e : missingItems.entrySet()) {
@@ -359,65 +359,151 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             if (w > maxW) maxW = w;
         }
         int popupW = Math.max(minW, maxW + pad * 2);
-        int lineH = 10, titleH = 15;
+        int lineH = 7, titleH = 10;
         int popupH = titleH + (missingItems.size() * lineH) + pad * 2;
-        int px = (width - popupW) / 2, py = (height - popupH) / 2;
+        int px = (int) (width*0.04), py = (int) (height*0.305);
 
-        drawPopupBox(guiGraphics, px, py, popupW, popupH);
-        int textX = px + pad, textY = py + pad;
-        guiGraphics.drawString(font, "Missing Items:", textX, textY, 0xFFFFFF, false);
+        // Decide on a scale factor:
+        float scale = 0.75F;
 
-        textY += titleH;
+        // Title (scaled):
+        guiGraphics.pose().pushPose();
+        {
+            // Translate first, so that text is positioned where you want it
+            guiGraphics.pose().translate(px + pad, py + pad, 0);
+            // Apply your chosen scale
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            // Now we draw at (0, 0) because we've already done the translate above.
+            guiGraphics.drawString(font, "Missing Items:", 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
+
+        int counter = 0;
+        // Then your text lines, maybe also scaled:
+        int textY = py + pad + titleH;  // This is your "normal" Y at full scale
         for (var e : missingItems.entrySet()) {
             String txt = e.getValue() + " x " + e.getKey().getDescription().getString();
-            guiGraphics.drawString(font, txt, textX, textY, 0xFFFFFF, false);
-            textY += lineH;
+
+            guiGraphics.pose().pushPose();
+            {
+                // Move the position for each line
+                guiGraphics.pose().translate(px + pad, textY, 0);
+                guiGraphics.pose().scale(scale, scale, 1.0F);
+
+                guiGraphics.drawString(font, txt, 0, 0, 0xFFFFFF, false);
+            }
+            guiGraphics.pose().popPose();
+
+            textY += lineH; // next line
+
+            counter++;
+            if (counter == 3) {
+                guiGraphics.pose().translate(px + pad, textY, 0);
+                guiGraphics.pose().scale(scale, scale, 1.0F);
+                guiGraphics.drawString(font, "And more...", 0, 0, 0xFFFFFF, false);
+                break;
+            }
         }
     }
 
-    private void renderNotEnoughEnergyPopup(GuiGraphics guiGraphics) {
-        int w = 200, h = 50, pad = 10;
-        int px = (width - w) / 2, py = (height - h) / 2;
-        drawPopupBox(guiGraphics, px, py, w, h);
 
-        String msg1 = "Not enough energy";
-        String msg2 = "to place the structure!";
-        int msg1Width = font.width(msg1);
-        int mx = px + (w - msg1Width) / 2;
-        int my = py + (h - font.lineHeight) / 2;
-        guiGraphics.drawString(font, msg1, mx, my, 0xFFFFFF, false);
-        guiGraphics.drawString(font, msg2, mx, my + 10, 0xFFFFFF, false);
+    private void renderNotEnoughEnergyPopup(GuiGraphics guiGraphics) {
+        // The two lines we want to show
+        String line1 = "Not enough energy";
+        String line2 = "to place the structure!";
+
+        // Decide on a scale factor (same as you did in missing-items)
+        float scale = 0.75F;
+        int pad = 6;      // Horizontal padding
+        int lineH = 10;   // Vertical distance between lines (at full scale)
+
+        // Figure out the longest line to decide how wide the popup should be
+        int line1Width = font.width(line1);
+        int line2Width = font.width(line2);
+        int maxWidth    = Math.max(line1Width, line2Width);
+
+        // Minimum popup width so it doesn’t get too narrow
+        int minWidth  = 150;
+        int popupW    = Math.max(minWidth, maxWidth + pad * 2);
+        // We have 2 lines plus some vertical padding
+        int popupH    = lineH * 2 + pad * 2;
+
+        // Position similar to your missing-items method
+        // (You can change these multipliers to match your UI design.)
+        int px = (int) (width*0.04), py = (int) (height*0.305);
+
+        // Draw first line, scaled
+        guiGraphics.pose().pushPose();
+        {
+            // Move to top-left of popup, then add padding
+            guiGraphics.pose().translate(px + pad, py + pad, 0);
+            // Scale everything inside
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            // Draw line1 at (0,0) because we already translated above
+            guiGraphics.drawString(font, line1, 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
+
+        // Draw second line, scaled
+        guiGraphics.pose().pushPose();
+        {
+            // Move down by lineH at full scale (before scaling)
+            guiGraphics.pose().translate(px + pad, py + pad + lineH, 0);
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            guiGraphics.drawString(font, line2, 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
     }
 
     private void renderPlacementDelayPopup(GuiGraphics guiGraphics, int ticks) {
-        int sec = ticks / 20;
+        // Compute remaining time
+        int   sec  = ticks / 20;
         float frac = (ticks % 20) / 20f;
         String timeText = String.format("Time remaining: %.1fs", sec + frac);
 
-        int w = 200, h = 50, pad = 10;
-        int px = (width - w) / 2, py = (height - h) / 2;
-        drawPopupBox(guiGraphics, px, py, w, h);
-
+        // Title
         String title = "Placing Structure...";
-        int titleW = font.width(title);
-        int tx = px + (w - titleW) / 2;
-        int ty = py + pad;
-        guiGraphics.drawString(font, title, tx, ty, 0xFFFFFF, false);
 
-        int timeW = font.width(timeText);
-        guiGraphics.drawString(font, timeText, px + (w - timeW) / 2, ty + 20, 0xFFFFFF, false);
-    }
+        // Scale & layout settings
+        float scale = 0.75F;
+        int pad     = 6;
+        int lineH   = 10;
 
-    private void drawPopupBox(GuiGraphics g, int x, int y, int w, int h) {
-        g.fill(x, y, x + w, y + h, 0xAA000000);
-        // top
-        g.fill(x, y, x + w, y + 1, 0xFFFFFFFF);
-        // bottom
-        g.fill(x, y + h - 1, x + w, y + h, 0xFFFFFFFF);
-        // left
-        g.fill(x, y, x + 1, y + h, 0xFFFFFFFF);
-        // right
-        g.fill(x + w - 1, y, x + w, y + h, 0xFFFFFFFF);
+        // Compute max width among the lines we’ll display
+        int titleWidth = font.width(title);
+        int timeWidth  = font.width(timeText);
+        int maxWidth   = Math.max(titleWidth, timeWidth);
+
+        int minWidth   = 150;
+        int popupW     = Math.max(minWidth, maxWidth + pad * 2);
+        // 2 lines => 2 * lineH plus top/bottom pad
+        int popupH     = lineH * 2 + pad * 2;
+
+        // Position it somewhere similar to your Missing Items popup
+        int px = (int) (width*0.04), py = (int) (height*0.305);
+
+        // Draw the title
+        guiGraphics.pose().pushPose();
+        {
+            guiGraphics.pose().translate(px + pad, py + pad, 0);
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            guiGraphics.drawString(font, title, 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
+
+        // Draw the time remaining
+        guiGraphics.pose().pushPose();
+        {
+            guiGraphics.pose().translate(px + pad, py + pad + lineH, 0);
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            guiGraphics.drawString(font, timeText, 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
     }
 
     // --------------------------------------------------

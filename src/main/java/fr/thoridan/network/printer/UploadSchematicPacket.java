@@ -12,7 +12,7 @@ public class UploadSchematicPacket {
     private final int chunkIndex;
     private final int totalChunks;
     private final byte[] chunkData;
-    private static final int MAX_SCHEMATIC_SIZE = 1_000_000; // Limit: e.g. 1 MB per schematic
+    private static final int MAX_SCHEMATIC_SIZE = 1000000; // Limit: e.g. 1 MB per schematic
 
     public UploadSchematicPacket(String schematicName, int chunkIndex, int totalChunks, byte[] chunkData) {
         this.schematicName = schematicName;

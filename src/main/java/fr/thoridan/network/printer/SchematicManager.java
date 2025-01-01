@@ -1,5 +1,6 @@
 package fr.thoridan.network.printer;
 
+import fr.thoridan.Techutilities;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -24,11 +25,13 @@ public class SchematicManager {
 
         // Before writing the chunk, check if we’d exceed the limit
         if (outputStream.size() + data.length > maxSize) {
-            System.out.println("Rejected upload: size limit exceeded for " + name);
+            Techutilities.broadcastServerMessage("Rejected upload: size limit exceeded for " + name, false);
             // Optionally remove partial upload data
             playerMap.remove(name);
             return;
         }
+
+        //TODO : Add more security
 
         // Write the chunk
         try {
@@ -40,27 +43,35 @@ public class SchematicManager {
             return;
         }
 
-        // If index+1 == total, we have the final chunk
+        // If index+1 == total, we received the final chunk
         if (index + 1 == total) {
+            // We have all bytes
             byte[] fullBytes = outputStream.toByteArray();
-            System.out.println("Upload complete: " + name + " (" + fullBytes.length + " bytes)");
-            playerMap.remove(name); // remove from map now
 
-            // Optional: Immediately parse NBT to confirm it’s valid
-            try (var bais = new ByteArrayInputStream(fullBytes)) {
-                CompoundTag nbt = NbtIo.readCompressed(bais);
+            // Write them to a server file so the usual loadSchematicData can find it
+            File schematicsFolder = new File(FMLPaths.GAMEDIR.get().toFile(), "schematics");
+            schematicsFolder.mkdirs(); // ensure the folder exists
+            File serverFile = new File(schematicsFolder, name);
 
-                //TODO
-                // Do something with 'nbt':
-                // Option A: store in memory
-                // SchematicDataRegistry.put(name, nbt);
-                // Option B: write to a file so loadSchematicData(...) can find it
-                // e.g. Files.write(Path.of("schematics", name), fullBytes);
-
+            try (FileOutputStream fos = new FileOutputStream(serverFile)) {
+                fos.write(fullBytes);
+                fos.flush();
             } catch (IOException e) {
-                System.out.println("Upload parse failed for: " + name);
                 e.printStackTrace();
             }
+
+            // Now your server has "schematics/<name>" with the full content.
+            // So next time loadSchematicData(...) is called, it will succeed.
+
+            // (Optional) parse it in memory as well
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(fullBytes)) {
+                CompoundTag nbt = NbtIo.readCompressed(bais);
+                // Use or store 'nbt' if you want
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            playerMap.remove(name);
         }
     }
 }
