@@ -28,9 +28,11 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -68,7 +70,7 @@ public class PrinterBlockEntity extends BlockEntity {
 
     private int placementDelayTicks = -1;
     private int clientPlacementDelayTicks = -1;
-    private double tick_per_block = 3;
+    private double tick_per_block = 0.1;
     private int energy_per_block = 1000;
 
     // Energy
@@ -129,6 +131,12 @@ public class PrinterBlockEntity extends BlockEntity {
         }
         Techutilities.broadcastServerMessage("Schematic data loaded.", false);
 
+        // Perform permission checks using a fake player
+        if (!checkPermissions(serverLevel, targetPos, rotation, player)) {
+            Techutilities.broadcastServerMessage("Player lacks permissions to place the structure.", false);
+            return;
+        }
+
         // Calculate required items
         Map<Item, Integer> requiredItems = calculateRequiredItems(rotation, loadedPalette, loadedBlocksTag);
         int totalBlocks = loadedBlocksTag.size();
@@ -160,9 +168,10 @@ public class PrinterBlockEntity extends BlockEntity {
         pendingRotation = rotation;
         pendingSchematicName = schematicName;
         placementDelayTicks = (int) (totalBlocks * tick_per_block);
-        Techutilities.broadcastServerMessage("Structure placement scheduled. It will takes" + tick_per_block + " ticks", false);
+        Techutilities.broadcastServerMessage("Structure placement scheduled. It will take " + tick_per_block + " ticks", false);
         setChanged();
     }
+
 
     /**
      * Actually places all blocks, called after the delay finishes in {@link #tick}.
@@ -387,6 +396,57 @@ public class PrinterBlockEntity extends BlockEntity {
     //            PLACEMENT HELPERS
     // -----------------------------------------------------
 
+    private boolean checkPermissions(ServerLevel serverLevel, BlockPos targetPos, Rotation rotation, ServerPlayer realPlayer) {
+        // Create a fake player with the same UUID as the real player
+        GameProfile ownerProfile = new GameProfile(realPlayer.getUUID(), "[PrinterOwner]");
+        FakePlayer fakePlayer = FakePlayerFactory.get(serverLevel, ownerProfile);
+        fakePlayer.setGameMode(GameType.SURVIVAL);
+
+        // Iterate through all chunks covered by the schematic
+        Set<ChunkPos> affectedChunks = new HashSet<>();
+        for (int i = 0; i < loadedBlocksTag.size(); i++) {
+            CompoundTag blockTag = loadedBlocksTag.getCompound(i);
+
+            // Calculate world position of the block
+            ListTag posList = blockTag.getList("pos", Tag.TAG_INT);
+            BlockPos relPos = new BlockPos(posList.getInt(0), posList.getInt(1), posList.getInt(2));
+            BlockPos worldPos = transformBlockPos(relPos, rotation).offset(targetPos);
+
+            // Add chunk positions to the set
+            affectedChunks.add(new ChunkPos(worldPos));
+        }
+
+        // Check permissions for each chunk by attempting to place a temporary block
+        for (ChunkPos chunk : affectedChunks) {
+            BlockPos testPos = new BlockPos(chunk.getMinBlockX(), serverLevel.getSeaLevel(), chunk.getMinBlockZ());
+            BlockState testBlock = Blocks.STONE.defaultBlockState();
+
+            // Try placing the block
+            if (!tryPlaceBlock(fakePlayer, serverLevel, testPos, testBlock)) {
+                Techutilities.broadcastServerMessage("Permission check failed in chunk: " + chunk, false);
+                return false; // Permission denied
+            }
+        }
+
+        return true; // Permission granted
+    }
+
+    private boolean tryPlaceBlock(FakePlayer fakePlayer, ServerLevel serverLevel, BlockPos pos, BlockState testBlock) {
+        ItemStack testItem = new ItemStack(testBlock.getBlock().asItem());
+        fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, testItem);
+
+        BlockHitResult hitResult = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+        InteractionResult result = fakePlayer.gameMode.useItemOn(fakePlayer, serverLevel, testItem, InteractionHand.MAIN_HAND, hitResult);
+
+        // If placement succeeded, remove the block and return true
+        if (result.consumesAction()) {
+            serverLevel.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+            return true;
+        }
+
+        return false; // Placement failed
+    }
+
     /**
      * Transforms a local block-pos by the given rotation.
      */
@@ -397,41 +457,6 @@ public class PrinterBlockEntity extends BlockEntity {
             case CLOCKWISE_180 -> new BlockPos(-pos.getX(), pos.getY(), -pos.getZ());
             case COUNTERCLOCKWISE_90 -> new BlockPos(pos.getZ(), pos.getY(), -pos.getX());
         };
-    }
-
-    /**
-     * Simulates block placement via a FakePlayer using standard useItemOn logic.
-     */
-    private void simulateBlockPlacement(FakePlayer fakePlayer, ServerLevel level, BlockState blockState, BlockPos pos, @Nullable CompoundTag nbt) {
-        ItemStack stack = new ItemStack(blockState.getBlock().asItem());
-        if (stack.isEmpty()) return;
-
-        stack.setCount(1);
-        fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, stack);
-        fakePlayer.setPos(pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5);
-
-        BlockHitResult hitResult = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
-        InteractionResult result = fakePlayer.gameMode.useItemOn(fakePlayer, level, stack, InteractionHand.MAIN_HAND, hitResult);
-
-        // If placement succeeded and there's tile entity data:
-        if (result.consumesAction() && nbt != null) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be != null) be.load(nbt);
-        }
-    }
-
-    /**
-     * Resets the block entity to 'no placement in progress'.
-     */
-    private void resetPlacement() {
-        pendingTargetPos = null;
-        pendingRotation = null;
-        pendingSchematicName = null;
-        loadedSchematicNbt = null;
-        loadedPalette = null;
-        loadedBlocksTag = null;
-        placementDelayTicks = -1;
-        setChanged();
     }
 
     // -----------------------------------------------------

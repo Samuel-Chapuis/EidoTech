@@ -25,6 +25,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Rotation;
 
 import java.io.File;
@@ -49,6 +50,7 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     private int selectedIndex = -1;
     private boolean notEnoughEnergy = false;
     private EditBox filePathField;
+    private ChunkPos missingPermissionChunk;
 
     // Adjusted widths & heights to accommodate extra UI
     public PrinterScreen(PrinterMenu menu, Inventory inv, Component titleIn) {
@@ -345,6 +347,10 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
     public void setMissingItems(Map<Item, Integer> missingItems) {
         this.missingItems = missingItems;
     }
+    
+    public void setMissingPermission(ChunkPos chunk) {
+        this.missingPermissionChunk = chunk;
+    }
 
     public void displayNotEnoughEnergyPopup() {
         this.notEnoughEnergy = true;
@@ -502,6 +508,56 @@ public class PrinterScreen extends AbstractContainerScreen<PrinterMenu> {
             guiGraphics.pose().scale(scale, scale, 1.0F);
 
             guiGraphics.drawString(font, timeText, 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
+    }
+    
+    private void renderMissingPermissionPopup(GuiGraphics guiGraphics) {
+        // The two lines we want to show
+        String line1 = "You do not have permission";
+        String line2 = "to place the structure at : " + missingPermissionChunk.x + ", " + missingPermissionChunk.z;
+
+        // Decide on a scale factor (same as you did in missing-items)
+        float scale = 0.75F;
+        int pad = 6;      // Horizontal padding
+        int lineH = 10;   // Vertical distance between lines (at full scale)
+
+        // Figure out the longest line to decide how wide the popup should be
+        int line1Width = font.width(line1);
+        int line2Width = font.width(line2);
+        int maxWidth    = Math.max(line1Width, line2Width);
+
+        // Minimum popup width so it doesn’t get too narrow
+        int minWidth  = 150;
+        int popupW    = Math.max(minWidth, maxWidth + pad * 2);
+        // We have 2 lines plus some vertical padding
+        int popupH    = lineH * 2 + pad * 2;
+
+        // Position similar to your missing-items method
+        // (You can change these multipliers to match your UI design.)
+        int px = (int) (width*0.04), py = (int) (height*0.305);
+
+        // Draw first line, scaled
+        guiGraphics.pose().pushPose();
+        {
+            // Move to top-left of popup, then add padding
+            guiGraphics.pose().translate(px + pad, py + pad, 0);
+            // Scale everything inside
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            // Draw line1 at (0,0) because we already translated above
+            guiGraphics.drawString(font, line1, 0, 0, 0xFFFFFF, false);
+        }
+        guiGraphics.pose().popPose();
+
+        // Draw second line, scaled
+        guiGraphics.pose().pushPose();
+        {
+            // Move down by lineH at full scale (before scaling)
+            guiGraphics.pose().translate(px + pad, py + pad + lineH, 0);
+            guiGraphics.pose().scale(scale, scale, 1.0F);
+
+            guiGraphics.drawString(font, line2, 0, 0, 0xFFFFFF, false);
         }
         guiGraphics.pose().popPose();
     }
