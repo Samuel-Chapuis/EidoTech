@@ -35,7 +35,9 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.structure.templatesystem.BlockIgnoreProcessor;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -166,47 +168,65 @@ public class PrinterBlockEntity extends BlockEntity {
      * Actually places all blocks, called after the delay finishes in {@link #tick}.
      */
     private void performStructurePlacement() {
-        Level level = getLevel();
-        if (!(level instanceof ServerLevel serverLevel)) return;
-
-        Techutilities.broadcastServerMessage("Perform structure placement", false);
-
-        // Create a FakePlayer with SURVIVAL mode
-        GameProfile ownerProfile = new GameProfile(ownerUUID, "[PrinterOwner]");
-        FakePlayer fakePlayer = FakePlayerFactory.get(serverLevel, ownerProfile);
-        fakePlayer.setGameMode(GameType.SURVIVAL);
-        Techutilities.broadcastServerMessage("Fake player created", false);
-
-        // We already have loadedSchematicNbt, loadedPalette, loadedBlocksTag
-        if (loadedSchematicNbt == null || loadedPalette == null || loadedBlocksTag == null) {
-            // If for some reason they are null, bail
-            resetPlacement();
+        Level level = this.getLevel();
+        if (level == null || level.isClientSide()) {
             return;
         }
-        Techutilities.broadcastServerMessage("Schematic data loaded", false);
 
-        // Place each block
-        for (int i = 0; i < loadedBlocksTag.size(); i++) {
-            CompoundTag blockTag = loadedBlocksTag.getCompound(i);
-
-            // Original block position
-            ListTag posList = blockTag.getList("pos", Tag.TAG_INT);
-            BlockPos relPos = new BlockPos(posList.getInt(0), posList.getInt(1), posList.getInt(2));
-
-            // Get rotated/mirrored state
-            BlockState original = loadedPalette.get(blockTag.getInt("state"));
-            BlockState rotated = original.mirror(Mirror.NONE).rotate(pendingRotation);
-            BlockPos worldPos = transformBlockPos(relPos, pendingRotation).offset(pendingTargetPos);
-
-            // Grab tile entity nbt if any
-            CompoundTag beNbt = blockTag.contains("nbt") ? blockTag.getCompound("nbt") : null;
-
-            // Simulate block placement
-            simulateBlockPlacement(fakePlayer, serverLevel, rotated, worldPos, beNbt);
+        if (!(level instanceof ServerLevel serverLevel)) {
+            System.out.println("Level is not a ServerLevel");
+            return;
         }
 
-        // Done -> reset
-        resetPlacement();
+        // Load the schematic file
+        File schematicsFolder = new File(FMLPaths.GAMEDIR.get().toFile(), "schematics");
+        File schematicFile = new File(schematicsFolder, this.pendingSchematicName);
+
+        if (!schematicFile.exists()) {
+            System.out.println("Schematic file does not exist: " + schematicFile.getAbsolutePath());
+            return;
+        }
+
+        CompoundTag nbtData;
+        try {
+            nbtData = NbtIo.readCompressed(new FileInputStream(schematicFile));
+        } catch (IOException e) {
+            System.out.println("Failed to read schematic file: " + e.getMessage());
+            return;
+        }
+
+        // Create a new StructureTemplate and load the NBT data
+        StructureTemplate template = new StructureTemplate();
+
+        // Obtain the HolderGetter<Block> from the ServerLevel's RegistryAccess
+        HolderGetter<Block> holderGetter = serverLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
+
+        // Load the structure with the HolderGetter
+        template.load(holderGetter, nbtData);
+
+        // Create StructurePlaceSettings
+        StructurePlaceSettings settings = new StructurePlaceSettings()
+                .setRotation(this.pendingRotation)
+                .setMirror(Mirror.NONE)
+                .setIgnoreEntities(false)
+                .setFinalizeEntities(true);
+
+        settings.getProcessors().add(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
+
+        // Place the structure
+        System.out.println("Placing structure in world");
+        boolean success = template.placeInWorld(serverLevel, this.pendingTargetPos, this.pendingTargetPos, settings, serverLevel.random, 2);
+
+        if (!success) {
+            System.out.println("Failed to place structure in world");
+        }
+
+        // Reset the pending variables
+        this.pendingTargetPos = null;
+        this.pendingRotation = null;
+        this.pendingSchematicName = null;
+        this.placementDelayTicks = -1;
+        this.setChanged(); // Mark the block entity as changed
     }
 
     /**
