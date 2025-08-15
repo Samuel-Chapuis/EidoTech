@@ -1,25 +1,19 @@
+<p align="left" style="display: flex; gap: 16px; align-items: center;">
+	<img src="doc/logo.png" alt="Image 1" style="height:80px; width:80px; object-fit:cover;">
+	<img src="src/main/resources/assets/eidomod/textures/block/hibiscus_4.png" alt="Image 2" style="height:80px; width:80px; object-fit:cover;">
+</p>
 
-Installation information
-=======
+# EidoTech
+Ce projet est une extension d’EidoMod visant à ajouter de nouvelles technologies en supplément des grands mods déjà existants.
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+## Contribution
+1. Créez une branche dédiée pour chaque nouvelle fonctionnalité ou correction de bug.
+2. Commitez vos modifications avec des messages clairs et détaillés.
+3. Assurez-vous de respecter la [syntaxe Git](doc/gitSyntax.md) du projet.
+4. Soumettez une pull request pour relecture par un autre membre de l’équipe.
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+## Auteurs
+- Samuel Chapuis aka. Thorid4n
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
-
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
-https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
-
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+## Licence
+Ce projet est **privé**. Toute reproduction, distribution ou utilisation non autorisée est strictement interdite.
