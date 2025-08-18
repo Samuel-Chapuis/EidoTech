@@ -33,14 +33,14 @@ public class ModBlocks {
     public static final DeferredHolder<Block, Block> GRAPE_VINE = registerBlock("grapevine", () -> new BiomColoredBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().strength(0.2F).sound(SoundType.GRASS)));
     public static final DeferredHolder<Block, Block> GRAPY_GRAPE_VINE = registerBlock("grapygrapevine", () -> new BiomColoredBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().strength(0.2F).sound(SoundType.GRASS)));
 
-    public static final DeferredHolder<Block, Block> BIG_LILY_PAD = registerBlock("biglilypad", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
-    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_PINK = registerBlock("biglilypad_pink", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
-    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_WHITE = registerBlock("biglilypad_white", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
-    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_RED = registerBlock("biglilypad_red", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
-    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_BLUE = registerBlock("biglilypad_blue", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> BIG_LILY_PAD = registerBlock("biglilypad", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_PINK = registerBlock("biglilypad_pink", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_WHITE = registerBlock("biglilypad_white", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_RED = registerBlock("biglilypad_red", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> BIG_LILY_PAD_BLUE = registerBlock("biglilypad_blue", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
 
-    public static final DeferredHolder<Block, Block> ALGAE0 = registerBlock("algae0", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
-    public static final DeferredHolder<Block, Block> ALGAE1 = registerBlock("algae1", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> ALGAE0 = registerBlock("algae0", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
+    public static final DeferredHolder<Block, Block> ALGAE1 = registerBlock("algae1", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).instabreak().sound(SoundType.LILY_PAD)));
 
     public static final DeferredHolder<Block, Block> BIG_DEAD_BUSH = registerBlock("big_dead_bush", () -> new VoxelBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)));
     public static final DeferredHolder<Block, Block> BIG_DEAD_TREE = registerBlock("big_dead_tree", () -> new VoxelBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)));

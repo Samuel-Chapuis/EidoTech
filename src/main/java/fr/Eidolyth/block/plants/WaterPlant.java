@@ -42,7 +42,14 @@ public class WaterPlant extends WaterlilyBlock implements net.minecraft.client.c
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        // Allow placement on water blocks
+        BlockPos pos = context.getClickedPos();
+        BlockState stateBelow = context.getLevel().getBlockState(pos.below());
+        
+        if (mayPlaceOn(stateBelow, context.getLevel(), pos.below())) {
+            return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        }
+        return null;
     }
 
     @Override
@@ -59,6 +66,7 @@ public class WaterPlant extends WaterlilyBlock implements net.minecraft.client.c
     protected boolean mayPlaceOn(BlockState state, BlockGetter level, BlockPos pos) {
         FluidState fluidState = level.getFluidState(pos);
         FluidState fluidStateAbove = level.getFluidState(pos.above());
+        // Allow placement on water blocks or ice, with empty fluid above
         return (fluidState.getType() == Fluids.WATER || state.getBlock() instanceof IceBlock) &&
                 fluidStateAbove.getType() == Fluids.EMPTY;
     }
@@ -67,7 +75,10 @@ public class WaterPlant extends WaterlilyBlock implements net.minecraft.client.c
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         BlockPos blockBelow = pos.below();
         BlockState stateBelow = level.getBlockState(blockBelow);
-        return this.mayPlaceOn(stateBelow, level, blockBelow);
+        FluidState fluidStateBelow = level.getFluidState(blockBelow);
+        // Can survive on water blocks or if water is present
+        return (fluidStateBelow.getType() == Fluids.WATER || stateBelow.getBlock() instanceof IceBlock) ||
+               this.mayPlaceOn(stateBelow, level, blockBelow);
     }
 
     @Override
