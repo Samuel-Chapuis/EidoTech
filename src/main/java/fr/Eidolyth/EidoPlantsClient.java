@@ -1,8 +1,11 @@
 package fr.Eidolyth;
 
+import fr.Eidolyth.block.plants.LeafLitterBlock;
+import fr.Eidolyth.block.plants.OrangeLeafLitterBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.world.level.GrassColor;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -45,14 +48,22 @@ public class EidoPlantsClient {
         ModBlocks.GRAPY_GRAPE_VINE.get()
         );
         
-        // Register color handler for normal LEAF_LITTER - should be orange
+        // Register color handler for normal LEAF_LITTER - use block's own color method
         event.register((state, level, pos, tintIndex) -> {
-            return 0xFF8C00; // Bright orange
+            Block block = state.getBlock();
+            if (block instanceof OrangeLeafLitterBlock orangeLeafLitterBlock) {
+                return orangeLeafLitterBlock.getColor(state, level, pos, tintIndex);
+            }
+            return GrassColor.getDefaultColor();
         }, ModBlocks.LEAF_LITTER.get());
         
-        // Register color handler for SPRING_LEAF_LITTER - should be green
+        // Register color handler for SPRING_LEAF_LITTER - use block's own color method
         event.register((state, level, pos, tintIndex) -> {
-            return 0x00FF00; // Bright green
+            Block block = state.getBlock();
+            if (block instanceof LeafLitterBlock leafLitterBlock) {
+                return leafLitterBlock.getColor(state, level, pos, tintIndex);
+            }
+            return GrassColor.getDefaultColor();
         }, ModBlocks.SPRING_LEAF_LITTER.get());
     }
 }

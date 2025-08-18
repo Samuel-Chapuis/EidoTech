@@ -18,6 +18,7 @@ import fr.Eidolyth.block.VoxelBlock;
 import fr.Eidolyth.block.plants.WaterPlant;
 import fr.Eidolyth.block.plants.CattailBlock;
 import fr.Eidolyth.block.plants.LeafLitterBlock;
+import fr.Eidolyth.block.plants.OrangeLeafLitterBlock;
 import fr.Eidolyth.block.plants.BiomColoredBlock;
 import fr.Eidolyth.block.plants.CustomSaplingBlock;
 import fr.Eidolyth.block.plants.MangroveCustomSapling;
@@ -50,7 +51,7 @@ public class ModBlocks {
 
     public static final DeferredHolder<Block, Block> CACTUS_FLOWER = registerBlock("cactus_flower", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)));
 
-    public static final DeferredHolder<Block, Block> LEAF_LITTER = registerBlock("leaf_litter", () -> new LeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS), 0xD2691E, 0.7f)); // Orange/saddle brown blend
+    public static final DeferredHolder<Block, Block> LEAF_LITTER = registerBlock("leaf_litter", () -> new OrangeLeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS))); // Orange leaf litter
     public static final DeferredHolder<Block, Block> SPRING_LEAF_LITTER = registerBlock("spring_leaf_litter", () -> new LeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS))); // Default green
 
     public static final DeferredHolder<Block, Block> WILD_FLOWER = registerBlock("wildflower", () -> new LeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
