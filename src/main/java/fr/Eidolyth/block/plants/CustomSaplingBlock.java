@@ -64,10 +64,20 @@ public class CustomSaplingBlock extends BushBlock implements BonemealableBlock {
         }
 
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+        
+        ResourceLocation structureId = structureList.get(random.nextInt(structureList.size()));
+        // Debug logging
+        System.out.println("Attempting to load structure: " + structureId);
+        
         Optional<StructureTemplate> opt = level
                 .getStructureManager()
-                .get(structureList.get(random.nextInt(structureList.size())));
-        if (!opt.isPresent()) return;
+                .get(structureId);
+        if (!opt.isPresent()) {
+            System.out.println("Structure not found: " + structureId);
+            return;
+        }
+        
+        System.out.println("Structure found, placing: " + structureId);
         StructureTemplate template = opt.get();
 
         // Rotation random

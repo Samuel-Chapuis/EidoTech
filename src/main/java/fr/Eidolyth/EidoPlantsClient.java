@@ -42,9 +42,17 @@ public class EidoPlantsClient {
             return GrassColor.getDefaultColor();
         }, 
         ModBlocks.GRAPE_VINE.get(),
-        ModBlocks.GRAPY_GRAPE_VINE.get(),
-        ModBlocks.LEAF_LITTER.get(),
-        ModBlocks.SPRING_LEAF_LITTER.get()
+        ModBlocks.GRAPY_GRAPE_VINE.get()
         );
+        
+        // Register color handler for normal LEAF_LITTER - should be orange
+        event.register((state, level, pos, tintIndex) -> {
+            return 0xFF8C00; // Bright orange
+        }, ModBlocks.LEAF_LITTER.get());
+        
+        // Register color handler for SPRING_LEAF_LITTER - should be green
+        event.register((state, level, pos, tintIndex) -> {
+            return 0x00FF00; // Bright green
+        }, ModBlocks.SPRING_LEAF_LITTER.get());
     }
 }
