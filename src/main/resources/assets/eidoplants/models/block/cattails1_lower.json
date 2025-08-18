@@ -1,1 +1,8 @@
-{ "parent": "minecraft:block/template_double_plant_lower" }
+{
+    "parent": "minecraft:block/cross",
+    "textures": {
+        "cross": "eidoplants:block/cattails1_bottom",
+        "particle": "eidoplants:block/cattails1_bottom"
+    },
+    "render_type": "cutout"
+}

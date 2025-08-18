@@ -2,6 +2,7 @@ package fr.Eidolyth;
 
 import fr.Eidolyth.block.plants.LeafLitterBlock;
 import fr.Eidolyth.block.plants.OrangeLeafLitterBlock;
+import fr.Eidolyth.block.plants.CutoutFlowerBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.world.level.GrassColor;
@@ -65,5 +66,17 @@ public class EidoPlantsClient {
             }
             return GrassColor.getDefaultColor();
         }, ModBlocks.SPRING_LEAF_LITTER.get());
+        
+        // Register color handlers for CutoutFlowerBlock instances (wildflower, bluet)
+        event.register((state, level, pos, tintIndex) -> {
+            Block block = state.getBlock();
+            if (block instanceof CutoutFlowerBlock cutoutFlowerBlock) {
+                return cutoutFlowerBlock.getColor(state, level, pos, tintIndex);
+            }
+            return GrassColor.getDefaultColor();
+        }, 
+        ModBlocks.WILD_FLOWER.get(),
+        ModBlocks.BLUET.get()
+        );
     }
 }

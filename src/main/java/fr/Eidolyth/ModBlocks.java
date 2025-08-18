@@ -22,6 +22,7 @@ import fr.Eidolyth.block.plants.OrangeLeafLitterBlock;
 import fr.Eidolyth.block.plants.BiomColoredBlock;
 import fr.Eidolyth.block.plants.CustomSaplingBlock;
 import fr.Eidolyth.block.plants.MangroveCustomSapling;
+import fr.Eidolyth.block.plants.CutoutFlowerBlock;
 
 public class ModBlocks {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(BuiltInRegistries.BLOCK, EidoPlants.MODID);
@@ -41,21 +42,21 @@ public class ModBlocks {
     public static final DeferredHolder<Block, Block> ALGAE0 = registerBlock("algae0", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
     public static final DeferredHolder<Block, Block> ALGAE1 = registerBlock("algae1", () -> new WaterPlant(BlockBehaviour.Properties.of().mapColor(MapColor.WATER).noCollission().instabreak().sound(SoundType.LILY_PAD)));
 
-    public static final DeferredHolder<Block, Block> BIG_DEAD_BUSH = registerBlock("big_dead_bush", () -> new VoxelBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).instabreak().sound(SoundType.GRASS)));
-    public static final DeferredHolder<Block, Block> BIG_DEAD_TREE = registerBlock("big_dead_tree", () -> new VoxelBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> BIG_DEAD_BUSH = registerBlock("big_dead_bush", () -> new VoxelBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> BIG_DEAD_TREE = registerBlock("big_dead_tree", () -> new VoxelBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)));
 
-    public static final DeferredHolder<Block, Block> CATTAILS1 = registerBlock("cattails1", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
-    public static final DeferredHolder<Block, Block> CATTAILS2 = registerBlock("cattails2", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
-    public static final DeferredHolder<Block, Block> SWAMP_CATTAILS1 = registerBlock("swamp_cattails1", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
-    public static final DeferredHolder<Block, Block> SWAMP_CATTAILS2 = registerBlock("swamp_cattails2", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> CATTAILS1 = registerBlock("cattails1", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().noOcclusion().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> CATTAILS2 = registerBlock("cattails2", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().noOcclusion().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> SWAMP_CATTAILS1 = registerBlock("swamp_cattails1", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().noOcclusion().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> SWAMP_CATTAILS2 = registerBlock("swamp_cattails2", () -> new CattailBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().noOcclusion().instabreak().sound(SoundType.GRASS)));
 
     public static final DeferredHolder<Block, Block> CACTUS_FLOWER = registerBlock("cactus_flower", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)));
 
     public static final DeferredHolder<Block, Block> LEAF_LITTER = registerBlock("leaf_litter", () -> new OrangeLeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS))); // Orange leaf litter
     public static final DeferredHolder<Block, Block> SPRING_LEAF_LITTER = registerBlock("spring_leaf_litter", () -> new LeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS))); // Default green
 
-    public static final DeferredHolder<Block, Block> WILD_FLOWER = registerBlock("wildflower", () -> new LeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
-    public static final DeferredHolder<Block, Block> BLUET = registerBlock("bluet", () -> new LeafLitterBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> WILD_FLOWER = registerBlock("wildflower", () -> new CutoutFlowerBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
+    public static final DeferredHolder<Block, Block> BLUET = registerBlock("bluet", () -> new CutoutFlowerBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noOcclusion().instabreak().sound(SoundType.GRASS)));
 
     public static final DeferredHolder<Block, Block> HIBISCUS = registerBlock("hibiscus", () -> new FlowerBlock(
         MobEffects.HEAL,
