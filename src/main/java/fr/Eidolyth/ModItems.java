@@ -10,6 +10,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import fr.Eidolyth.item.BiomColoredBlockItem;
 import fr.Eidolyth.item.BiomColoredPlaceOnWaterBlockItem;
+import fr.Eidolyth.item.WateringPotItem;
 
 // Minimal items registration using NeoForge DeferredRegister
 public class ModItems {
@@ -115,5 +116,10 @@ public class ModItems {
         }
         
         return item;
+    }
+    
+    // helper used by ModBlocks to register WateringPotItem for the watering pot block
+    public static <T extends Block> DeferredHolder<Item, Item> registerWateringPotItem(String name, DeferredHolder<Block, T> block) {
+        return ITEMS.register(name, () -> new WateringPotItem(block.get(), new Item.Properties()));
     }
 }

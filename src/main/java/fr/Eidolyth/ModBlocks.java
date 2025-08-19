@@ -184,11 +184,23 @@ public class ModBlocks {
         )
     ));
 
+    public static final DeferredHolder<Block, Block> WATERING_POT = registerWateringPotBlock("watering_pot", () -> new VoxelBlock(
+    BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
+    ));
+
     // Helper to register a block and corresponding item
     private static <T extends Block> DeferredHolder<Block, T> registerBlock(String name, Supplier<T> blockSupplier) {
         DeferredHolder<Block, T> toReturn = BLOCKS.register(name, blockSupplier);
         // register BlockItem
         ModItems.registerBlockItem(name, toReturn);
+        return toReturn;
+    }
+
+    // Helper to register the watering pot block with its special item
+    private static <T extends Block> DeferredHolder<Block, T> registerWateringPotBlock(String name, Supplier<T> blockSupplier) {
+        DeferredHolder<Block, T> toReturn = BLOCKS.register(name, blockSupplier);
+        // register WateringPotItem
+        ModItems.registerWateringPotItem(name, toReturn);
         return toReturn;
     }
 

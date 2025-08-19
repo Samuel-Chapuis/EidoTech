@@ -52,6 +52,7 @@ public class ModCreativeModTabs {
                 pOutput.accept(ModBlocks.CUSTOM_SAKURA_SAPLING.get());
                 pOutput.accept(ModBlocks.CUSTOM_SEQUOIA_SAPLING.get());
                 pOutput.accept(ModBlocks.CUSTOM_SPRUCE_SAPLING.get());
+                pOutput.accept(ModBlocks.WATERING_POT.get());
             })
             .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .build());
