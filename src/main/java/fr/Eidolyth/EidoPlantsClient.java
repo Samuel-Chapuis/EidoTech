@@ -97,4 +97,46 @@ public class EidoPlantsClient {
         ModBlocks.ALGAE1.get()
         );
     }
+
+    @SubscribeEvent
+    static void registerItemColorHandlers(RegisterColorHandlersEvent.Item event) {
+        // Register color handlers for BiomColoredBlockItem instances
+        event.register((stack, tintIndex) -> {
+            // Use the same default color as BiomColoredBlock for consistency
+            return 0x48B518;
+        }, 
+        ModItems.GRAPE_VINE_ITEM.get(),
+        ModItems.GRAPY_GRAPE_VINE_ITEM.get()
+        );
+
+        // Register color handlers for BiomColoredPlaceOnWaterBlockItem instances
+        event.register((stack, tintIndex) -> {
+            // Use the same default color as WaterPlant for consistency
+            return 0x48B518;
+        }, 
+        ModItems.BIG_LILY_PAD_BIOM_ITEM.get(),
+        ModItems.BIG_LILY_PAD_PINK_BIOM_ITEM.get(),
+        ModItems.BIG_LILY_PAD_WHITE_BIOM_ITEM.get(),
+        ModItems.BIG_LILY_PAD_RED_BIOM_ITEM.get(),
+        ModItems.BIG_LILY_PAD_BLUE_BIOM_ITEM.get(),
+        ModItems.ALGAE0_BIOM_ITEM.get(),
+        ModItems.ALGAE1_BIOM_ITEM.get()
+        );
+
+        // Register color handlers for LeafLitterBlockItem instances
+        event.register((stack, tintIndex) -> {
+            // Use the default foliage color for spring leaf litter
+            return 0x48B518;
+        }, 
+        ModItems.SPRING_LEAF_LITTER_ITEM.get()
+        );
+
+        // Register color handlers for OrangeLeafLitterBlockItem instances
+        event.register((stack, tintIndex) -> {
+            // Use the orange color for orange leaf litter
+            return 0xD2691E;
+        }, 
+        ModItems.LEAF_LITTER_ITEM.get()
+        );
+    }
 }
