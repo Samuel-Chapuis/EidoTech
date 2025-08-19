@@ -3,6 +3,9 @@ package fr.Eidolyth.block.plants;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -21,13 +24,11 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlac
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.network.chat.Component;
 
 import javax.annotation.Nonnull;
 
@@ -63,56 +64,104 @@ public class CustomSaplingBlock extends BushBlock implements BonemealableBlock {
             return;
         }
 
+        // Remove the sapling
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         
+        // Select a random structure from the list
         ResourceLocation structureId = structureList.get(random.nextInt(structureList.size()));
-        // Debug logging
+        
+        System.out.println("=== MANUAL STRUCTURE LOADING ===");
         System.out.println("Attempting to load structure: " + structureId);
         
-        Optional<StructureTemplate> opt = level
-                .getStructureManager()
-                .get(structureId);
-        if (!opt.isPresent()) {
-            System.out.println("Structure not found: " + structureId);
+        // Try to load the structure manually using the resource manager
+        StructureTemplate template = new StructureTemplate();
+        String resourcePath = "/data/" + structureId.getNamespace() + "/structures/" + structureId.getPath() + ".nbt";
+        
+        try {
+            // Get the resource as an input stream
+            InputStream inputStream = CustomSaplingBlock.class.getResourceAsStream(resourcePath);
+            
+            if (inputStream == null) {
+                System.err.println("Resource not found: " + resourcePath);
+                System.err.println("Trying alternative path...");
+                
+                // Try alternative path without leading slash
+                String altPath = "data/" + structureId.getNamespace() + "/structures/" + structureId.getPath() + ".nbt";
+                inputStream = CustomSaplingBlock.class.getClassLoader().getResourceAsStream(altPath);
+                
+                if (inputStream == null) {
+                    System.err.println("Alternative resource not found: " + altPath);
+                    level.setBlock(pos, state, 3);
+                    return;
+                }
+                System.out.println("Found with alternative path: " + altPath);
+            } else {
+                System.out.println("Found resource: " + resourcePath);
+            }
+            
+            // Read the NBT data
+            CompoundTag nbtData = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
+            inputStream.close();
+            
+            // Load the template from NBT
+            template.load(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BLOCK), nbtData);
+            
+            System.out.println("Structure loaded successfully from NBT!");
+            
+        } catch (IOException e) {
+            System.err.println("Failed to load structure NBT: " + e.getMessage());
+            e.printStackTrace();
+            level.setBlock(pos, state, 3);
+            return;
+        } catch (Exception e) {
+            System.err.println("Unexpected error loading structure: " + e.getMessage());
+            e.printStackTrace();
+            level.setBlock(pos, state, 3);
             return;
         }
         
-        System.out.println("Structure found, placing: " + structureId);
-        StructureTemplate template = opt.get();
-
-        // Rotation random
-        net.minecraft.world.level.block.Rotation rotation = net.minecraft.world.level.block.Rotation.getRandom(random);
-
+        // Get structure size for proper centering
         Vec3i size = template.getSize();
-        int sx = size.getX();
-        int sz = size.getZ();
-        int hx = sx / 2;
-        int hz = sz / 2;
-
-        BlockPos offset;
-        switch (rotation) {
-            case CLOCKWISE_90:
-                offset = new BlockPos(-hz, yoffset, hx);
-                break;
-            case COUNTERCLOCKWISE_90:
-                offset = new BlockPos(hz, yoffset, -hx);
-                break;
-            case CLOCKWISE_180:
-                offset = new BlockPos(-hx, yoffset, -hz);
-                break;
-            default: // NONE
-                offset = new BlockPos(hx, yoffset, hz);
-                break;
+        System.out.println("Structure size: " + size.getX() + "x" + size.getY() + "x" + size.getZ());
+        
+        if (size.equals(Vec3i.ZERO)) {
+            System.err.println("Structure has zero size, something went wrong");
+            level.setBlock(pos, state, 3);
+            return;
         }
-
-        BlockPos origin = pos.subtract(offset);
-
+        
+        // Calculate the center offset (place structure centered on the sapling position)
+        int halfX = size.getX() / 2;
+        int halfZ = size.getZ() / 2;
+        
+        // Calculate the origin position (bottom-center of structure should be at sapling position)
+        BlockPos origin = pos.offset(-halfX, yoffset, -halfZ);
+        
+        // Create placement settings
         StructurePlaceSettings settings = new StructurePlaceSettings()
-                .setRotation(rotation)
-                .addProcessor(BlockIgnoreProcessor.STRUCTURE_BLOCK)
-                .addProcessor(BlockIgnoreProcessor.AIR);
-
-        template.placeInWorld(level, origin, origin, settings, random, 2);
+                .setRotation(net.minecraft.world.level.block.Rotation.NONE)
+                .setMirror(net.minecraft.world.level.block.Mirror.NONE)
+                .addProcessor(BlockIgnoreProcessor.STRUCTURE_AND_AIR)
+                .setIgnoreEntities(false)
+                .setFinalizeEntities(true);
+        
+        System.out.println("Placing structure at origin: " + origin + " (sapling was at: " + pos + ")");
+        
+        // Place the structure
+        try {
+            boolean success = template.placeInWorld(level, origin, origin, settings, random, 2);
+            System.out.println("Structure placement result: " + success);
+            System.out.println("=== END MANUAL STRUCTURE LOADING ===");
+            
+            if (!success) {
+                System.err.println("Failed to place structure, placing sapling back");
+                level.setBlock(pos, state, 3);
+            }
+        } catch (Exception e) {
+            System.err.println("Exception while placing structure: " + e.getMessage());
+            e.printStackTrace();
+            level.setBlock(pos, state, 3);
+        }
     }
 
     @Override
