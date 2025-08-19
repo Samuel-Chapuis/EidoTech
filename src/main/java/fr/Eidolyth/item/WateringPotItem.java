@@ -1,6 +1,7 @@
 package fr.Eidolyth.item;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
@@ -39,6 +40,9 @@ public class WateringPotItem extends BlockItem {
                 if (applyCustomBonemeal(level, pos, blockState, player)) {
                     // Play bonemeal sound effect
                     level.playSound(null, pos, SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                    
+                    // Spawn water particles around the sapling
+                    spawnWaterParticles((ServerLevel) level, pos);
                     
                     // Spawn particles (this will be handled client-side)
                     level.gameEvent(GameEvent.ITEM_INTERACT_FINISH, pos, GameEvent.Context.of(player, blockState));
@@ -101,5 +105,39 @@ public class WateringPotItem extends BlockItem {
         }
         
         return false;
+    }
+    
+    /**
+     * Spawn water particles around the sapling to show watering effect
+     */
+    private void spawnWaterParticles(ServerLevel level, BlockPos pos) {
+        RandomSource random = level.getRandom();
+        
+        // Spawn water drip particles around and above the sapling
+        for (int i = 0; i < 15; i++) {
+            double offsetX = (random.nextDouble() - 0.5) * 1.5; // Random offset between -0.75 and 0.75
+            double offsetY = random.nextDouble() * 1.2 + 0.5;   // Random height between 0.5 and 1.7 blocks above
+            double offsetZ = (random.nextDouble() - 0.5) * 1.5; // Random offset between -0.75 and 0.75
+            
+            double x = pos.getX() + 0.5 + offsetX;
+            double y = pos.getY() + offsetY;
+            double z = pos.getZ() + 0.5 + offsetZ;
+            
+            // Spawn falling water particles
+            level.sendParticles(ParticleTypes.FALLING_WATER, x, y, z, 1, 0.0, -0.1, 0.0, 0.1);
+        }
+        
+        // Spawn splash particles at the base
+        for (int i = 0; i < 8; i++) {
+            double offsetX = (random.nextDouble() - 0.5) * 1.0;
+            double offsetZ = (random.nextDouble() - 0.5) * 1.0;
+            
+            double x = pos.getX() + 0.5 + offsetX;
+            double y = pos.getY() + 0.1;
+            double z = pos.getZ() + 0.5 + offsetZ;
+            
+            // Spawn splash particles
+            level.sendParticles(ParticleTypes.SPLASH, x, y, z, 1, 0.0, 0.0, 0.0, 0.1);
+        }
     }
 }
